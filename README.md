@@ -20,7 +20,7 @@ On Laptop 2, copy the `ui` folder, open PowerShell inside it, and run:
 py -3.12 -m http.server 8080
 ```
 
-Open `http://localhost:8080` in Laptop 2's browser. Enter `http://LAPTOP1_IP:8000`, click **Connect**, choose any trip, then click **Predict route**. Find Laptop 1's IPv4 address with `ipconfig`; both laptops must be on the same network. Allow the Windows firewall prompt for Python on the private network if it appears. Laptop 1's console prints `INFERENCE REQUEST` and `INFERENCE DONE` for every selection. Show those logs to the evaluator.
+Open `http://localhost:8080` in Laptop 2's browser. The map background needs internet on Laptop 2; if it is offline the routes still draw on a plain background. Enter `http://LAPTOP1_IP:8000`, click **Connect**, choose any trip, then click **Predict route**. Find Laptop 1's IPv4 address with `ipconfig`; both laptops must be on the same network. Allow the Windows firewall prompt for Python on the private network if it appears. Laptop 1's console prints `INFERENCE REQUEST` and `INFERENCE DONE` for every selection. Show those logs to the evaluator.
 
 To switch to the final reserved trips, set `PATHSNAP_EVAL_ROOT` **on Laptop 1 only** to their folder before starting the API:
 
@@ -86,7 +86,7 @@ The Viterbi decoder favours staying on the same arc, then moving to a directly c
 - `train.py`: five-model comparison, grouped CV, Optuna search, model artifacts
 - `server.py`: FastAPI evaluator endpoint and server-side metrics
 - `evaluate_full.py`: complete student-test rehearsal through the same prediction path
-- `ui/index.html`: Laptop 2 interface, no JavaScript dependencies or online map tiles
+- `ui/index.html`: Laptop 2 interface. Route map uses Leaflet (bundled in `ui/vendor/`, works offline) with OpenStreetMap background tiles, which need internet on Laptop 2. Layers can be toggled: map background, raw GPS, actual path, predicted path, and candidate roads.
 - `generate_assets.py`: real comparison plot and interactive Folium map
 - `make_report.py`: generated technical report draft
 - `make_first_eval_guide.py`: short first-evaluation PDF tied to the source code and recorded metrics

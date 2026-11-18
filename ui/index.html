@@ -1,31 +1,50 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>PathSnap evaluator</title>
+  <link rel="stylesheet" href="vendor/leaflet.css">
   <style>
-    :root{font-family:Inter,Segoe UI,Arial,sans-serif;color:#152134;background:#f4f7fb}
-    *{box-sizing:border-box}body{margin:0}header{background:#12233e;color:white;padding:20px 28px}
-    h1{margin:0;font-size:25px}header p{margin:5px 0 0;color:#c2d0e3}
+    :root{--ink:#152134;--muted:#61738a;--line:#dce5ef;--blue:#174f91;--actual:#d55e00;--pred:#009e73;--gps:#0072b2;
+      font-family:Inter,"Segoe UI",Arial,sans-serif;color:var(--ink);background:#f4f7fb}
+    *{box-sizing:border-box}
+    body{margin:0}
+    header{background:linear-gradient(135deg,#12233e,#1b3a63);color:#fff;padding:22px 28px}
+    h1{margin:0;font-size:25px}
+    header p{margin:5px 0 0;color:#c2d0e3}
     main{max-width:1200px;margin:24px auto;padding:0 18px;display:grid;gap:16px}
-    .card{background:white;border:1px solid #dce5ef;border-radius:12px;padding:18px;box-shadow:0 2px 8px #1521340a}
-    .controls{display:flex;gap:10px;flex-wrap:wrap;align-items:end}label{display:grid;gap:5px;font-size:13px;font-weight:700}
+    .card{background:#fff;border:1px solid var(--line);border-radius:12px;padding:18px;box-shadow:0 2px 8px #1521340a}
+    .card h2{margin:0 0 6px;font-size:18px}
+    .controls{display:flex;gap:10px;flex-wrap:wrap;align-items:end}
+    label{display:grid;gap:5px;font-size:13px;font-weight:700}
     input,select,button{font:inherit;border-radius:7px;padding:10px 12px;border:1px solid #b8c8d9}
-    input{width:280px}select{min-width:145px}button{background:#1263aa;color:white;border-color:#1263aa;cursor:pointer;font-weight:700}
-    button:disabled{opacity:.5;cursor:default}.status{color:#42556c;margin-top:10px}
-    .badge{display:inline-block;background:#e8f0fc;color:#174f91;border-radius:20px;padding:5px 10px;font-size:12px;font-weight:700}
-    .metrics{display:flex;gap:12px;flex-wrap:wrap}.metric{min-width:160px;background:#f3f7fc;border-radius:8px;padding:12px}
-    .metric strong{display:block;font-size:22px;margin-top:5px}.metric span{font-size:12px;color:#52657b}
-    .map-wrap{height:min(68vh,680px);min-height:420px;background:#f7f9fc;border:1px solid #dce5ef;border-radius:8px;overflow:hidden}
-    svg{width:100%;height:100%;display:block}.map-legend{display:flex;gap:10px 20px;flex-wrap:wrap;margin:12px 0;color:#34465b;font-size:13px}
-    .layer-toggle{display:flex;align-items:center;gap:7px;padding:7px 10px;border:1px solid #dce5ef;border-radius:8px;background:#fbfcfe;cursor:pointer}
-    .layer-toggle input{width:auto;margin:0;accent-color:#174f91}.layer-toggle span{white-space:nowrap}
-    .legend-line{width:26px;height:0;border-top:4px solid;display:inline-block}
-    .legend-line.actual{border-color:#d55e00;border-top-style:dashed}.legend-line.predicted{border-color:#009e73}
-    .legend-line.roads{border-color:#b9c4d0;border-top-width:2px}
-    .legend-gps{width:12px;height:12px;background:#0072b2;border:2px solid white;box-shadow:0 0 0 1px #16405e;border-radius:50%;display:inline-block}
-    .map-hint{margin:8px 0 0;color:#61738a;font-size:12px;line-height:1.5}
-    small{color:#61738a;line-height:1.5}
+    input{width:280px}
+    select{min-width:145px}
+    button{background:var(--blue);color:#fff;border-color:var(--blue);cursor:pointer;font-weight:700}
+    button:disabled{opacity:.5;cursor:default}
+    .status{color:#42556c;margin-top:10px;font-size:14px}
+    .badge{display:inline-block;background:#e8f0fc;color:var(--blue);border-radius:20px;padding:5px 10px;font-size:12px;font-weight:700}
+    .metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}
+    .metric{background:#f3f7fc;border-radius:8px;padding:12px}
+    .metric strong{display:block;font-size:22px;margin-top:5px}
+    .metric span{font-size:12px;color:#52657b}
+    .route-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+    .toggles{display:flex;gap:8px;flex-wrap:wrap}
+    .toggle{display:flex;align-items:center;gap:8px;padding:7px 10px;border:1px solid var(--line);border-radius:8px;background:#fbfcfe;cursor:pointer;font-size:13px;font-weight:600}
+    .toggle[hidden]{display:none}
+    .toggle input{width:auto;margin:0;accent-color:var(--blue)}
+    .sw{display:inline-block;flex:none}
+    .sw.actual{width:26px;height:7px;border-radius:4px;background:var(--actual)}
+    .sw.predicted{width:26px;height:0;border-top:4px dashed var(--pred)}
+    .sw.gps{width:12px;height:12px;border-radius:50%;background:var(--gps);border:2px solid #fff;box-shadow:0 0 0 1px #16405e}
+    .sw.roads{width:26px;height:2px;background:#5b6b7d;opacity:.5}
+    .sw.bg{width:26px;height:16px;border-radius:3px;background:linear-gradient(90deg,#dfe9d6,#cfe0f4)}
+    #map{height:min(64vh,620px);min-height:400px;border:1px solid var(--line);border-radius:8px;background:#e9eef4}
+    .map-missing{margin:0 0 12px;padding:12px;border-radius:8px;background:#fff5e6;color:#7a4a00;font-size:13px;line-height:1.5}
+    .key{display:flex;gap:6px 22px;flex-wrap:wrap;font-size:12.5px;color:#34465b;margin:12px 0 0;line-height:1.5}
+    small{color:var(--muted);line-height:1.5}
+    .leaflet-tooltip{font-size:12px;font-weight:600}
   </style>
 </head>
 <body>
@@ -41,96 +60,211 @@
     </div>
     <div id="status" class="status">Enter Laptop 1's local IP address and connect.</div>
   </section>
-  <section class="card"><h2>Results</h2><div id="metrics" class="metrics"><small>Select a trip to run inference.</small></div><p><small id="note"></small></p></section>
-  <section class="card"><h2>Route view</h2>
-    <div class="map-legend" aria-label="Map layer controls">
-      <label class="layer-toggle"><input type="checkbox" data-layer-toggle="gps" checked><i class="legend-gps"></i><span>Raw GPS points</span></label>
-      <label class="layer-toggle" id="actual-toggle"><input type="checkbox" data-layer-toggle="actual" checked><i class="legend-line actual"></i><span>Actual path</span></label>
-      <label class="layer-toggle"><input type="checkbox" data-layer-toggle="predicted" checked><i class="legend-line predicted"></i><span>Predicted path</span></label>
-      <label class="layer-toggle"><input type="checkbox" data-layer-toggle="roads" checked><i class="legend-line roads"></i><span>Nearby roads</span></label>
+
+  <section class="card">
+    <h2>Results</h2>
+    <div id="metrics" class="metrics"><small>Select a trip to run inference.</small></div>
+    <p><small id="note"></small></p>
+  </section>
+
+  <section class="card">
+    <div class="route-head">
+      <div>
+        <h2>Route view</h2>
+        <small id="route-summary">Run a prediction to compare the GPS trace, actual path and predicted path.</small>
+      </div>
+      <div class="toggles" aria-label="Map layers">
+        <label class="toggle"><input type="checkbox" data-layer="basemap" checked><i class="sw bg"></i><span>Map background</span></label>
+        <label class="toggle"><input type="checkbox" data-layer="gps" checked><i class="sw gps"></i><span>Raw GPS</span></label>
+        <label class="toggle" id="actual-toggle"><input type="checkbox" data-layer="actual" checked><i class="sw actual"></i><span>Actual path</span></label>
+        <label class="toggle"><input type="checkbox" data-layer="predicted" checked><i class="sw predicted"></i><span>Predicted path</span></label>
+        <label class="toggle"><input type="checkbox" data-layer="roads"><i class="sw roads"></i><span>Candidate roads</span></label>
+      </div>
     </div>
-    <div class="map-wrap"><svg id="map" viewBox="0 0 1000 600" role="img" aria-label="Map showing raw GPS points, actual path, predicted path, and nearby roads"></svg></div>
-    <p class="map-hint">Actual path: orange dashed · Predicted path: solid green · GPS observations: blue dots with a dotted trace. Toggle layers to compare overlapping routes.</p>
+    <p id="map-missing" class="map-missing" hidden>The map library did not load (vendor/leaflet.js is missing). Check that the ui folder was copied completely.</p>
+    <div id="map" role="img" aria-label="Map showing raw GPS points, the actual path, the predicted path, and optional candidate roads"></div>
+    <p class="key">
+      <span><b style="color:var(--actual)">━━</b> Actual path: the reference route, thick solid orange</span>
+      <span><b style="color:var(--pred)">┅┅</b> Predicted path: dashed green, drawn on top so it stays visible where the two overlap</span>
+      <span><b style="color:var(--gps)">●</b> Raw GPS: blue dots in time order, joined by a dotted line</span>
+      <span>Start is a green ring, end is a dark ring.</span>
+    </p>
+    <p><small>Map tiles © OpenStreetMap contributors. The background map needs internet on this laptop; the routes are drawn without it.</small></p>
   </section>
 </main>
+
+<script src="vendor/leaflet.js"></script>
 <script>
-const $=id=>document.getElementById(id);
-const setStatus=s=>$('status').textContent=s;
-function base(){return $('api').value.trim().replace(/\/$/,'')}
-$('api').value=localStorage.getItem('pathsnap-api')||'';
-$('connect').onclick=async()=>{
-  try{
-    setStatus('Connecting…');localStorage.setItem('pathsnap-api',base());
-    const response=await fetch(base()+'/trips');if(!response.ok)throw new Error('HTTP '+response.status);
-    const data=await response.json();$('mode').textContent=data.mode;
-    $('trip').innerHTML='';for(const id of data.trip_ids){const o=document.createElement('option');o.value=id;o.textContent=id;$('trip').appendChild(o)}
-    $('run').disabled=!data.trip_ids.length;
+const $ = id => document.getElementById(id);
+const setStatus = s => $('status').textContent = s;
+const base = () => $('api').value.trim().replace(/\/$/, '');
+$('api').value = localStorage.getItem('pathsnap-api') || '';
+
+/* ---------- connection and prediction ---------- */
+async function connect() {
+  try {
+    setStatus('Connecting…');
+    localStorage.setItem('pathsnap-api', base());
+    const response = await fetch(base() + '/trips');
+    if (!response.ok) throw new Error('HTTP ' + response.status);
+    const data = await response.json();
+    $('mode').textContent = data.mode;
+    $('trip').innerHTML = '';
+    for (const id of data.trip_ids) {
+      const option = document.createElement('option');
+      option.value = id;
+      option.textContent = id;
+      $('trip').appendChild(option);
+    }
+    $('run').disabled = !data.trip_ids.length;
     setStatus(`Connected. ${data.trip_ids.length} trips available. Select any trip and predict.`);
-  }catch(e){setStatus('Connection failed: '+e.message+' — check the API address and both laptops’ network.')}
-};
-$('run').onclick=async()=>{
-  const id=$('trip').value;if(!id)return;
-  $('run').disabled=true;setStatus('Running model and route decoder for trip '+id+'…');
-  try{
-    const response=await fetch(base()+'/predict',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({trip_id:id})});
-    if(!response.ok)throw new Error((await response.json()).detail||'HTTP '+response.status);
-    const data=await response.json();renderMetrics(data.metrics);renderMap(data);
-    $('note').textContent=data.metric_note||'';
-    setStatus(`Completed trip ${id}. Check the Laptop 1 console for the inference request log.`);
-  }catch(e){setStatus('Prediction failed: '+e.message)}finally{$('run').disabled=false}
-};
-function renderMetrics(m){
-  const names={gps_points:'GPS points',route_continuity_before_decoding:'Route continuity before decoding',route_continuity_after_decoding:'Route continuity after decoding',approx_pointwise_accuracy_classifier:'Approx. accuracy before',approx_pointwise_accuracy_viterbi:'Approx. accuracy after',reference_arc_recall:'Reference arc recall',bridge_arcs_inserted:'Bridge arcs inserted',unresolved_connections:'Unresolved connections'};
-  $('metrics').innerHTML='';for(const [key,label] of Object.entries(names)){
-    if(m[key]===undefined)continue;const div=document.createElement('div');div.className='metric';
-    const value=['gps_points','bridge_arcs_inserted','unresolved_connections'].includes(key)?String(m[key]):(100*m[key]).toFixed(1)+'%';
-    div.innerHTML='<span></span><strong></strong>';div.querySelector('span').textContent=label;div.querySelector('strong').textContent=value;$('metrics').appendChild(div)
+  } catch (e) {
+    setStatus('Connection failed: ' + e.message + ' — check the API address and both laptops’ network.');
   }
 }
-function renderMap(data){
-  const svg=$('map');svg.replaceChildren();
-  const reference=data.reference_lines||data.actual_lines||[];
-  $('actual-toggle').hidden=!reference.length;
-  // Fit the view to this trip; distant road candidates can otherwise shrink the routes to a dot.
-  const pts=[...data.gps,...reference.flat(),...data.predicted_lines.flat()];
-  if(!pts.length)return;
-  const meanLat=pts.reduce((sum,p)=>sum+p[1],0)/pts.length,cosLat=Math.max(Math.cos(meanLat*Math.PI/180),.01);
-  const projected=pts.map(p=>[p[0]*cosLat,p[1]]);
-  const x0=Math.min(...projected.map(p=>p[0])),x1=Math.max(...projected.map(p=>p[0]));
-  const y0=Math.min(...projected.map(p=>p[1])),y1=Math.max(...projected.map(p=>p[1]));
-  const dx=Math.max(x1-x0,1e-9),dy=Math.max(y1-y0,1e-9),scale=Math.min(920/dx,520/dy);
-  const left=(1000-dx*scale)/2,top=(600-dy*scale)/2;
-  function xy(p){return [left+(p[0]*cosLat-x0)*scale,top+(y1-p[1])*scale]}
-  const ns='http://www.w3.org/2000/svg';
-  function makeLayer(name){const group=document.createElementNS(ns,'g');group.dataset.layer=name;svg.appendChild(group);return group}
-  const layers={roads:makeLayer('roads'),predicted:makeLayer('predicted'),actual:makeLayer('actual'),gps:makeLayer('gps')};
-  function line(group,points,color,width,dash,label){
-    if(!points.length)return;
-    const d=points.map((p,i)=>{const q=xy(p);return(i?'L':'M')+q[0].toFixed(1)+' '+q[1].toFixed(1)}).join(' ');
-    const addPath=(stroke,strokeWidth)=>{const path=document.createElementNS(ns,'path');path.setAttribute('d',d);path.setAttribute('fill','none');path.setAttribute('stroke',stroke);path.setAttribute('stroke-width',strokeWidth);path.setAttribute('stroke-linecap','round');path.setAttribute('stroke-linejoin','round');path.setAttribute('vector-effect','non-scaling-stroke');if(dash)path.setAttribute('stroke-dasharray',dash);group.appendChild(path);return path};
-    addPath('#fff',width+4);const path=addPath(color,width);path.setAttribute('opacity','.98');
-    const title=document.createElementNS(ns,'title');title.textContent=label;path.appendChild(title);
+
+async function run() {
+  const id = $('trip').value;
+  if (!id) return;
+  $('run').disabled = true;
+  setStatus('Running model and route decoder for trip ' + id + '…');
+  try {
+    const response = await fetch(base() + '/predict', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({trip_id: id})
+    });
+    if (!response.ok) throw new Error((await response.json()).detail || 'HTTP ' + response.status);
+    const data = await response.json();
+    renderMetrics(data.metrics);
+    renderMap(data);
+    $('note').textContent = data.metric_note || '';
+    setStatus(`Completed trip ${id}. Check the Laptop 1 console for the inference request log.`);
+  } catch (e) {
+    setStatus('Prediction failed: ' + e.message);
+  } finally {
+    $('run').disabled = false;
   }
-  for(const segment of data.road_lines)line(layers.roads,segment,'#b9c4d0',1.5,'','Nearby road');
-  for(const segment of data.predicted_lines)line(layers.predicted,segment,'#009e73',5,'','Predicted path');
-  for(const segment of reference)line(layers.actual,segment,'#d55e00',4,'10 7','Actual/reference path');
-  if(data.gps.length>1)line(layers.gps,data.gps,'#0072b2',2,'2 7','GPS observation trace (approximate)');
-  data.gps.forEach((p,index)=>{const q=xy(p),circle=document.createElementNS(ns,'circle');circle.setAttribute('cx',q[0]);circle.setAttribute('cy',q[1]);circle.setAttribute('r',4.5);circle.setAttribute('fill','#0072b2');circle.setAttribute('stroke','#fff');circle.setAttribute('stroke-width','2');circle.setAttribute('vector-effect','non-scaling-stroke');const title=document.createElementNS(ns,'title');title.textContent=`Raw GPS observation ${index+1}`;circle.appendChild(title);layers.gps.appendChild(circle)});
-  document.querySelectorAll('[data-layer-toggle]').forEach(toggle=>{
-    const layer=layers[toggle.dataset.layerToggle];if(!layer)return;
-    layer.style.display=toggle.checked?'':'none';toggle.onchange=()=>{layer.style.display=toggle.checked?'':'none'};
+}
+$('connect').onclick = connect;
+$('run').onclick = run;
+
+/* ---------- metrics ---------- */
+function renderMetrics(m) {
+  const names = {
+    gps_points: 'GPS points',
+    route_continuity_before_decoding: 'Route continuity before decoding',
+    route_continuity_after_decoding: 'Route continuity after decoding',
+    approx_pointwise_accuracy_classifier: 'Approx. accuracy before',
+    approx_pointwise_accuracy_viterbi: 'Approx. accuracy after',
+    reference_arc_recall: 'Reference arc recall',
+    bridge_arcs_inserted: 'Bridge arcs inserted',
+    unresolved_connections: 'Unresolved connections'
+  };
+  const counts = ['gps_points', 'bridge_arcs_inserted', 'unresolved_connections'];
+  $('metrics').innerHTML = '';
+  for (const [key, label] of Object.entries(names)) {
+    if (m[key] === undefined) continue;
+    const div = document.createElement('div');
+    div.className = 'metric';
+    const value = counts.includes(key) ? String(m[key]) : (100 * m[key]).toFixed(1) + '%';
+    div.innerHTML = '<span></span><strong></strong>';
+    div.querySelector('span').textContent = label;
+    div.querySelector('strong').textContent = value;
+    $('metrics').appendChild(div);
+  }
+}
+
+/* ---------- route map (Leaflet + OpenStreetMap) ---------- */
+// Lower panes are drawn first, so the predicted path sits above the actual path,
+// and GPS points sit above both.
+const PANES = {roads: 405, actual: 410, predicted: 420, gps: 430};
+let map = null, basemap = null, layers = {};
+
+function ensureMap() {
+  if (map) return true;
+  if (!window.L) {
+    $('map-missing').hidden = false;
+    return false;
+  }
+  map = L.map('map', {zoomControl: true}).setView([10, 78], 5);
+  basemap = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+  });
+  for (const [name, z] of Object.entries(PANES)) map.createPane(name).style.zIndex = z;
+  layers = {roads: L.layerGroup(), actual: L.layerGroup(), predicted: L.layerGroup(), gps: L.layerGroup()};
+  applyToggles();
+  return true;
+}
+
+function applyToggles() {
+  if (!map) return;
+  document.querySelectorAll('[data-layer]').forEach(box => {
+    const target = box.dataset.layer === 'basemap' ? basemap : layers[box.dataset.layer];
+    if (!target) return;
+    if (box.checked && !map.hasLayer(target)) map.addLayer(target);
+    if (!box.checked && map.hasLayer(target)) map.removeLayer(target);
   });
 }
-// Optional demo URL for a real screenshot: ?api=http://127.0.0.1:8000&trip=00000052
-const params=new URLSearchParams(location.search);
-if(params.has('api')){
-  $('api').value=params.get('api');
-  setTimeout(async()=>{
-    await $('connect').onclick();
-    if(params.has('trip')&&Array.from($('trip').options).some(o=>o.value===params.get('trip'))){
-      $('trip').value=params.get('trip');await $('run').onclick();
+document.querySelectorAll('[data-layer]').forEach(box => box.addEventListener('change', applyToggles));
+
+function renderMap(data) {
+  if (!ensureMap()) return;
+  for (const group of Object.values(layers)) group.clearLayers();
+
+  // The server sends [lon, lat]; Leaflet expects [lat, lon].
+  const ll = p => [p[1], p[0]];
+  const lines = segments => segments.map(segment => segment.map(ll));
+  const gps = data.gps || [];
+  const reference = data.reference_lines || data.actual_lines || [];
+  const predicted = data.predicted_lines || [];
+  const roads = data.road_lines || [];
+
+  $('actual-toggle').hidden = !reference.length;
+  $('route-summary').textContent =
+    `${gps.length} GPS points · ${reference.length} actual arcs · ${predicted.length} predicted arcs`;
+
+  if (roads.length) L.polyline(lines(roads), {pane: 'roads', color: '#5b6b7d', weight: 2, opacity: .5, interactive: false}).addTo(layers.roads);
+  if (reference.length) L.polyline(lines(reference), {pane: 'actual', color: '#d55e00', weight: 7, opacity: .85})
+    .bindTooltip('Actual path (reference route)', {sticky: true}).addTo(layers.actual);
+  if (predicted.length) L.polyline(lines(predicted), {pane: 'predicted', color: '#009e73', weight: 4, opacity: 1, dashArray: '9 6'})
+    .bindTooltip('Predicted path', {sticky: true}).addTo(layers.predicted);
+  if (gps.length > 1) L.polyline(gps.map(ll), {pane: 'gps', color: '#0072b2', weight: 2, opacity: .7, dashArray: '2 6', interactive: false}).addTo(layers.gps);
+
+  gps.forEach((p, i) => L.circleMarker(ll(p), {
+    pane: 'gps', radius: 4.5, color: '#fff', weight: 1.5, fillColor: '#0072b2', fillOpacity: 1
+  }).bindTooltip(`Raw GPS ${i + 1} of ${gps.length}`).addTo(layers.gps));
+
+  if (gps.length) {
+    L.circleMarker(ll(gps[0]), {pane: 'gps', radius: 8, color: '#009e73', weight: 3, fillColor: '#fff', fillOpacity: 1})
+      .bindTooltip('Start').addTo(layers.gps);
+    L.circleMarker(ll(gps[gps.length - 1]), {pane: 'gps', radius: 8, color: '#152134', weight: 3, fillColor: '#fff', fillOpacity: 1})
+      .bindTooltip('End').addTo(layers.gps);
+  }
+
+  applyToggles();
+  const bounds = L.latLngBounds([...gps, ...reference.flat(), ...predicted.flat()].map(ll));
+  if (bounds.isValid()) {
+    map.invalidateSize();
+    map.fitBounds(bounds, {padding: [36, 36], maxZoom: 17});
+  }
+}
+
+ensureMap();
+
+/* ---------- optional demo link: ?api=http://127.0.0.1:8000&trip=00000052 ---------- */
+const params = new URLSearchParams(location.search);
+if (params.has('api')) {
+  $('api').value = params.get('api');
+  setTimeout(async () => {
+    await connect();
+    if (params.has('trip') && Array.from($('trip').options).some(o => o.value === params.get('trip'))) {
+      $('trip').value = params.get('trip');
+      await run();
     }
-  },100);
+  }, 100);
 }
 </script>
-</body></html>
+</body>
+</html>

@@ -20,7 +20,6 @@ The configured GitHub repository is public.
 
 ## Remaining before final submission
 
-- Run `train.py` with the final dataset to refresh model binaries and measured results using the current training-only selection rule.
-- Run `generate_assets.py --data ...` to refresh the data-backed EDA image and Folium map from that run.
+- Training, student-test evaluation, inventory, feature example, and data-backed map/EDA were refreshed from the local `Student folder` dataset using the current training-only selection rule.
 - Capture the real two-laptop API console log/screenshot and add it to the final report. The included report is explicitly a draft and does not fabricate this evidence.
 The dataset and reserved evaluator data are not included. Never add reserved evaluator routes to training or use their scores to select a model.
