@@ -1,4 +1,13 @@
-# PathSnap: two-laptop hackathon prototype
+# PathSnap:
+
+# TEAM NUMBER 77
+
+# Team Members:
+PES1UG24CS275 - MONIKA PM
+PES1UG24CS276  -  MORE ATHARV SACHIN
+PES1UG24CS282 - MUKTHAPURAM LIKHITH REDDY
+PES1UG24CS283 -  MULLUNJA STUTHI
+
 
 This repository contains a real, runnable pipeline for the supplied student dataset: GPS/road loading, six road candidates per observation, five classifier experiments, grouped cross-validation, Bayesian tuning, a Viterbi decoder, a FastAPI evaluator endpoint, and a browser UI. The included model and results were produced from the 80 training trips and 10 student-test trips. The separate evaluator trips were **not** supplied or used.
 
@@ -43,7 +52,7 @@ The five executed notebooks in the repository root are:
 4. `04_PathSnap_Bayesian_Hyperparameter_Optimisation.ipynb` — five Optuna TPE trials and fair untuned/tuned comparison.
 5. `05_PathSnap_HMM_Viterbi_Route_Reconstruction.ipynb` — hidden arc states, emission/transition scores, before/after results, and route plots.
 
-They include saved outputs. To rerun them, place them in this repository root, set `PATHSNAP_DATA_ROOT` to the extracted student folder, install `requirements.txt`, and open Jupyter Notebook. The standalone report draft is `artifacts/PathSnap_Technical_Report_DRAFT.pdf`; add a real API-log screenshot from the final two-laptop demonstration before submission.
+They include saved outputs. To rerun them, place them in this repository root, set `PATHSNAP_DATA_ROOT` to the extracted student folder, install `requirements.txt`, and open Jupyter Notebook. Add a real API-log screenshot from the final two-laptop demonstration before submission.
 
 ```powershell
 py -3.12 train.py --data 'C:\path\to\Student folder' --output artifacts --train-points-per-trip 120 --test-points-per-trip 250 --trials 5
@@ -88,9 +97,6 @@ The Viterbi decoder favours staying on the same arc, then moving to a directly c
 - `evaluate_full.py`: complete student-test rehearsal through the same prediction path
 - `ui/index.html`: Laptop 2 interface. Route map uses Leaflet (bundled in `ui/vendor/`, works offline) with OpenStreetMap background tiles, which need internet on Laptop 2. Layers can be toggled: map background, raw GPS, actual path, predicted path, and candidate roads.
 - `generate_assets.py`: real comparison plot and interactive Folium map
-- `make_report.py`: generated technical report draft
-- `make_first_eval_guide.py`: short first-evaluation PDF tied to the source code and recorded metrics
-- `VIVA_GUIDE.md`: short explanations of the required metrics and likely evaluator questions
-- `artifacts/`: trained models, actual results, maps, screenshots, report draft
+- `artifacts/`: trained models, actual results, maps, screenshots
 
 The source dataset is intentionally not copied into this project. Keep your downloaded dataset in its own folder and set `PATHSNAP_DATA_ROOT` to that path.
