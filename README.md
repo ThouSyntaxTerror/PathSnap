@@ -29,7 +29,7 @@ $env:PATHSNAP_EVAL_ROOT='C:\path\to\reserved_evaluator_trips'
 py -3.12 -m uvicorn server:app --host 0.0.0.0 --port 8000
 ```
 
-The folder must contain trip subfolders with matching `.track`, `.nodes`, `.arcs`, and (for server-side accuracy) `.route` files. The UI receives trip IDs, predicted geometry, and summary metrics. It never receives reference-route IDs or geometry. Do **not** put evaluator data in training or use its results to change model choices.
+The folder must contain trip subfolders with matching `.track`, `.nodes`, `.arcs`, and (for actual-path display and server-side accuracy) `.route` files. The UI shows raw GPS points, the actual/reference path, and the predicted path when the selected trip has a `.route` file. Only geometry is sent to the UI; reference arc IDs remain on the server. Keep the actual-path layer disabled for any blind evaluator set whose rules prohibit showing its reference route. Do **not** put evaluator data in training or use its results to change model choices.
 
 ## Retrain and regenerate results
 
@@ -45,7 +45,7 @@ py -3.12 make_first_eval_guide.py
 
 `train.py` uses all 80 training trips, sampling at most 120 GPS observations per trip to fit within hackathon time. The five models are Logistic Regression, Gaussian Naive Bayes, Decision Tree, Random Forest, and Histogram Gradient Boosting. Three-fold GroupKFold separates trips. The model family is selected using mean grouped training-CV macro F1 only; student-test results are reporting-only. Optuna TPE tunes the selected family with grouped training CV. All model settings, timings, metrics, confusion-matrix counts, and tuning trials are in `artifacts/experiment_results.json`.
 
-`generate_assets.py` saves model comparison, route-continuity, log-loss, and confusion-matrix plots from the results JSON. With `--data`, it also creates an EDA summary and interactive Folium map of student-test trip `00000052`; its reference route is visible only in this development map, not in the evaluator UI. The report generator uses actual logged data and screenshots. The included PDF is a **draft**: capture and add the required Laptop 1 CMD/API-log screenshot during the actual two-laptop demonstration. Do not submit invented measurements or a fabricated screenshot.
+`generate_assets.py` saves model comparison, route-continuity, log-loss, and confusion-matrix plots from the results JSON. With `--data`, it also creates an EDA summary and interactive Folium map of student-test trip `00000052`. The report generator uses actual logged data and screenshots. The included PDF is a **draft**: capture and add the required Laptop 1 CMD/API-log screenshot during the actual two-laptop demonstration. Do not submit invented measurements or a fabricated screenshot.
 
 ## Data and method
 

@@ -83,18 +83,23 @@ def predict(request: Request):
         metrics["approx_pointwise_accuracy_viterbi"] = float(np.mean(decoded == reference_per_point))
         ref_set, pred_set = set(trip.route.tolist()), set(routed.tolist())
         metrics["reference_arc_recall"] = len(ref_set & pred_set) / max(len(ref_set), 1)
-    # Send geometries only. Reference route IDs and geometry never leave the server.
+    # Return separate geometry layers for the dashboard. The reference layer is available
+    # only when that selected trip includes a .route file (student-test/rehearsal data).
     sample_idx = np.unique(np.linspace(0, len(ids) - 1, min(len(ids), 1200)).astype(int))
     gps = trip.track[sample_idx, :2].tolist()
     selected = list(dict.fromkeys(routed.tolist()))
     if len(selected) > 2000:
         selected = [selected[i] for i in np.linspace(0, len(selected) - 1, 2000).astype(int)]
     route_lines = [[trip.nodes[trip.arcs[a, 0]].tolist(), trip.nodes[trip.arcs[a, 1]].tolist()] for a in selected]
+    actual_lines = []
+    if trip.route is not None:
+        actual_lines = [[trip.nodes[trip.arcs[a, 0]].tolist(), trip.nodes[trip.arcs[a, 1]].tolist()]
+                        for a in trip.route.tolist()]
     road_sample = np.unique(candidates[sample_idx].ravel())
     if len(road_sample) > 2500: road_sample = road_sample[:2500]
     road_lines = [[trip.nodes[trip.arcs[a, 0]].tolist(), trip.nodes[trip.arcs[a, 1]].tolist()] for a in road_sample]
     log.info("INFERENCE DONE trip=%s gps=%d route_continuity=%.3f approx_accuracy=%s", request.trip_id, len(ids),
              metrics["route_continuity_after_decoding"], metrics.get("approx_pointwise_accuracy_viterbi"))
     return {"trip_id": request.trip_id, "mode": MODE, "metrics": metrics, "gps": gps,
-            "road_lines": road_lines, "predicted_lines": route_lines,
+            "road_lines": road_lines, "actual_lines": actual_lines, "predicted_lines": route_lines,
             "metric_note": "Pointwise accuracy uses the nearest reference-route arc as a proxy; the source does not provide a GPS-to-arc label for every point."}
