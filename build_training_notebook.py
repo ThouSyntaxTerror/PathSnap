@@ -145,7 +145,9 @@ Histogram Gradient Boosting had the strongest sampled **after-Viterbi** proxy po
 The reserved evaluator trips are not used here. These pointwise labels are derived from reference routes and should not be described as independently verified ground truth. Training and inference times can vary across machines."""),
         nbf.v4.new_markdown_cell("""## Final model evaluation and comparison
 
-This final cell compares all five models using the same metrics. The five model cells above contain the evaluation code, metrics, plots, and confusion matrices. The final family is selected using grouped **training CV macro F1**; student-test route metrics are reported separately."""),
+This final cell compares all five models using the same metrics. The five model cells above contain the evaluation code, metrics, plots, and confusion matrices. The final family is selected using grouped **training CV macro F1**; student-test route metrics are reported separately.
+
+**Route continuity** is the share of consecutive predicted arcs that either stay on the same arc or meet at a directed road node. Before Viterbi, each GPS point independently takes its highest-scoring candidate, which can jump between disconnected roads. Viterbi scores the entire sequence and penalizes disconnected transitions, so it usually improves continuity. A remaining gap is possible because the decoder permits a penalized fallback when GPS points or road candidates are missing."""),
         nbf.v4.new_code_cell('''summary = pd.DataFrame({name: {
     "Candidate accuracy": m["candidate_accuracy"],
     "Precision": m["precision"],
@@ -155,7 +157,9 @@ This final cell compares all five models using the same metrics. The five model 
     "Log loss": m["log_loss"],
     "Top-1 GPS accuracy": m["mean_trip_top1_accuracy"],
     "After-Viterbi GPS accuracy": m["mean_trip_accuracy_viterbi"],
-    "Route continuity after Viterbi": m["mean_continuity_viterbi"],
+    "Route continuity before Viterbi (%)": 100 * m["mean_continuity_classifier"],
+    "Route continuity after Viterbi (%)": 100 * m["mean_continuity_viterbi"],
+    "Continuity gain (percentage points)": 100 * (m["mean_continuity_viterbi"] - m["mean_continuity_classifier"]),
     "Candidate miss rate": m["mean_candidate_miss_rate"],
     "Training seconds including CV": m["training_seconds_including_cv"],
     "Model scoring seconds": m["inference_seconds_total"],
@@ -164,6 +168,11 @@ display(summary.style.format("{:.4f}"))
 ax = summary[["Top-1 GPS accuracy", "After-Viterbi GPS accuracy"]].plot.bar(figsize=(11, 4), ylim=(0, 1), rot=20)
 ax.set_ylabel("Mean per-trip proxy accuracy")
 ax.set_title("Classifier-only vs Viterbi route result")
+plt.tight_layout()
+plt.show()
+ax = summary[["Route continuity before Viterbi (%)", "Route continuity after Viterbi (%)"]].plot.bar(figsize=(11, 4), ylim=(0, 100), rot=20, color=["#9ab0c7", "#16866b"])
+ax.set_ylabel("Valid consecutive road steps (%)")
+ax.set_title("Route continuity improves after Viterbi decoding")
 plt.tight_layout()
 plt.show()'''),
     ]
