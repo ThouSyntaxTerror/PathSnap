@@ -55,7 +55,7 @@ def comparison_plots(results: dict, output: Path):
         ax.set_xlim(0, 1); ax.set_title(title); ax.invert_yaxis()
         for bar, val in zip(bars, values):
             ax.text(val + .01, bar.get_y() + bar.get_height() / 2, f"{val:.3f}", va="center", fontsize=8)
-    fig.suptitle(f"Green = selected by training CV ({labels[names.index(selected)]})", fontsize=9, color="#42566e")
+    fig.suptitle(f"Green = selected by after-Viterbi student-test proxy score ({labels[names.index(selected)]})", fontsize=9, color="#42566e")
     fig.savefig(output / "model_comparison.png", dpi=180)
     plt.close(fig)
 

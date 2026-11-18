@@ -36,7 +36,7 @@
     <div id="status" class="status">Enter Laptop 1's local IP address and connect.</div>
   </section>
   <section class="card"><h2>Results</h2><div id="metrics" class="metrics"><small>Select a trip to run inference.</small></div><p><small id="note"></small></p></section>
-  <section class="card"><h2>Route view</h2><div class="legend"><span><i class="dot" style="background:#a8b7c7"></i>Nearby roads</span><span><i class="dot" style="background:#19a873"></i>Predicted route</span><span><i class="dot" style="background:#2779d1"></i>GPS observations</span></div><div class="map-wrap"><svg id="map" viewBox="0 0 1000 600" role="img" aria-label="GPS points and predicted road route"></svg></div><p><small>Local coordinate view; it works without online map tiles. The server keeps the reference route private.</small></p></section>
+  <section class="card"><h2>Route view</h2><div class="legend"><span><i class="dot" style="background:#a8b7c7"></i>Nearby roads</span><span id="reference-key"><i class="dot" style="background:#e38b32"></i>Original/reference route</span><span><i class="dot" style="background:#2779d1"></i>Car's recorded GPS trace</span><span><i class="dot" style="background:#19a873"></i>Our predicted route</span></div><div class="map-wrap"><svg id="map" viewBox="0 0 1000 600" role="img" aria-label="Reference road route, recorded GPS trace, and predicted road route"></svg></div><p><small>Orange is the provided .route answer when available; blue connects recorded GPS samples and is only an approximation of the car's exact path. The map works without online tiles.</small></p></section>
 </main>
 <script>
 const $=id=>document.getElementById(id);
@@ -74,15 +74,20 @@ function renderMetrics(m){
 }
 function renderMap(data){
   const svg=$('map');svg.replaceChildren();
-  const pts=[...data.gps,...data.road_lines.flat(),...data.predicted_lines.flat()];
+  const reference=data.reference_lines||[];
+  $('reference-key').hidden=!reference.length;
+  // Fit the view to this trip; distant road candidates can otherwise shrink the routes to a dot.
+  const pts=[...data.gps,...reference.flat(),...data.predicted_lines.flat()];
   if(!pts.length)return;
   const xs=pts.map(p=>p[0]),ys=pts.map(p=>p[1]);let x0=Math.min(...xs),x1=Math.max(...xs),y0=Math.min(...ys),y1=Math.max(...ys);
   const dx=Math.max(x1-x0,1e-7),dy=Math.max(y1-y0,1e-7),pad=.04;
   function xy(p){return [40+920*(p[0]-x0)/dx,560-520*(p[1]-y0)/dy]}
-  function line(points,color,width,opacity){const path=document.createElementNS('http://www.w3.org/2000/svg','path');path.setAttribute('d',points.map((p,i)=>{const q=xy(p);return(i?'L':'M')+q[0].toFixed(1)+' '+q[1].toFixed(1)}).join(' '));path.setAttribute('fill','none');path.setAttribute('stroke',color);path.setAttribute('stroke-width',width);path.setAttribute('opacity',opacity);svg.appendChild(path)}
+  function line(points,color,width,opacity,dash=''){const path=document.createElementNS('http://www.w3.org/2000/svg','path');path.setAttribute('d',points.map((p,i)=>{const q=xy(p);return(i?'L':'M')+q[0].toFixed(1)+' '+q[1].toFixed(1)}).join(' '));path.setAttribute('fill','none');path.setAttribute('stroke',color);path.setAttribute('stroke-width',width);path.setAttribute('opacity',opacity);if(dash)path.setAttribute('stroke-dasharray',dash);svg.appendChild(path)}
   for(const segment of data.road_lines)line(segment,'#a8b7c7',1,.6);
-  for(const segment of data.predicted_lines)line(segment,'#19a873',3,.9);
-  for(const p of data.gps){const q=xy(p),circle=document.createElementNS('http://www.w3.org/2000/svg','circle');circle.setAttribute('cx',q[0]);circle.setAttribute('cy',q[1]);circle.setAttribute('r',2.2);circle.setAttribute('fill','#2779d1');circle.setAttribute('opacity',.75);svg.appendChild(circle)}
+  for(const segment of reference)line(segment,'#e38b32',7,.9,'12 7');
+  if(data.gps.length>1)line(data.gps,'#2779d1',2,.65);
+  for(const segment of data.predicted_lines)line(segment,'#19a873',3,.95);
+  for(const p of data.gps){const q=xy(p),circle=document.createElementNS('http://www.w3.org/2000/svg','circle');circle.setAttribute('cx',q[0]);circle.setAttribute('cy',q[1]);circle.setAttribute('r',1.7);circle.setAttribute('fill','#2779d1');circle.setAttribute('opacity',.7);svg.appendChild(circle)}
 }
 // Optional demo URL for a real screenshot: ?api=http://127.0.0.1:8000&trip=00000052
 const params=new URLSearchParams(location.search);

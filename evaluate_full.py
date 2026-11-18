@@ -25,6 +25,8 @@ def main():
             "approx_accuracy_after": m.get("approx_pointwise_accuracy_viterbi"),
             "route_continuity_before": m["route_continuity_before_decoding"],
             "route_continuity_after": m["route_continuity_after_decoding"],
+            "continuity_before": m["route_continuity_before_decoding"],
+            "continuity_after": m["route_continuity_after_decoding"],
             "reference_arc_recall": m.get("reference_arc_recall"),
             "bridge_arcs_inserted": m["bridge_arcs_inserted"],
             "unresolved_connections": m["unresolved_connections"]})

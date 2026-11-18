@@ -29,7 +29,7 @@ $env:PATHSNAP_EVAL_ROOT='C:\path\to\reserved_evaluator_trips'
 py -3.12 -m uvicorn server:app --host 0.0.0.0 --port 8000
 ```
 
-The folder must contain trip subfolders with matching `.track`, `.nodes`, `.arcs`, and (for server-side accuracy) `.route` files. The UI receives trip IDs, predicted geometry, and summary metrics. It never receives reference-route IDs or geometry. Do **not** put evaluator data in training or use its results to change model choices.
+The folder must contain trip subfolders with matching `.track`, `.nodes`, `.arcs`, and (for server-side accuracy and the orange map layer) `.route` files. Prediction runs without the reference route; after prediction, the API may send its geometry for visual comparison. The UI shows the recorded GPS trace in blue, the provided reference route in orange, and the predicted route in green. There is no separate pre-trip planned-route file. Do **not** put evaluator data in training or use its results to change model choices.
 
 ## Retrain and regenerate results
 
@@ -47,7 +47,7 @@ To open the executed five-model notebook, set `PATHSNAP_DATA_ROOT` to the extrac
 
 `train.py` uses all 80 training trips, sampling at most 120 GPS observations per trip to fit within hackathon time. The five models are Logistic Regression, Gaussian Naive Bayes, Decision Tree, Random Forest, and Histogram Gradient Boosting. Three-fold GroupKFold separates trips. Selection uses the ten student-test trips' mean accuracy **after** Viterbi, then Optuna TPE tunes the selected family with grouped training CV. All model settings, timings, metrics, and tuning trials are in `artifacts/experiment_results.json`.
 
-`generate_assets.py` saves a comparison chart and an interactive Folium map of student-test trip `00000052`; its reference route is visible only in this development map, not in the evaluator UI. The report generator uses actual logged data and screenshots. The included PDF is a **draft**: capture and add the required Laptop 1 CMD/API-log screenshot during the actual two-laptop demonstration. Do not submit invented measurements or a fabricated screenshot.
+`generate_assets.py` saves comparison charts and an interactive Folium map of student-test trip `00000052`. The report generator uses actual logged data and screenshots. The included PDF is a **draft**: capture and add the required Laptop 1 CMD/API-log screenshot during the actual two-laptop demonstration. Do not submit invented measurements or a fabricated screenshot.
 
 ## Data and method
 

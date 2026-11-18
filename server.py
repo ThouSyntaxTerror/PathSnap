@@ -74,6 +74,7 @@ def predict(request: Request):
         "bridge_arcs_inserted": int(bridge_count),
         "unresolved_connections": int(unresolved),
     }
+    reference_lines = []
     route_path = choices[request.trip_id] / f"{request.trip_id}.route"
     if route_path.exists():
         trip.route = read_array(route_path, 1, int).ravel()
@@ -83,7 +84,11 @@ def predict(request: Request):
         metrics["approx_pointwise_accuracy_viterbi"] = float(np.mean(decoded == reference_per_point))
         ref_set, pred_set = set(trip.route.tolist()), set(routed.tolist())
         metrics["reference_arc_recall"] = len(ref_set & pred_set) / max(len(ref_set), 1)
-    # Send geometries only. Reference route IDs and geometry never leave the server.
+        # Sent only after prediction is fixed; this is the provided reference route,
+        # not a separately supplied pre-trip plan.
+        reference_lines = [[trip.nodes[trip.arcs[a, 0]].tolist(), trip.nodes[trip.arcs[a, 1]].tolist()]
+                           for a in dict.fromkeys(trip.route.tolist())]
+    # Send geometries only, never the reference arc IDs.
     sample_idx = np.unique(np.linspace(0, len(ids) - 1, min(len(ids), 1200)).astype(int))
     gps = trip.track[sample_idx, :2].tolist()
     selected = list(dict.fromkeys(routed.tolist()))
@@ -96,5 +101,5 @@ def predict(request: Request):
     log.info("INFERENCE DONE trip=%s gps=%d route_continuity=%.3f approx_accuracy=%s", request.trip_id, len(ids),
              metrics["route_continuity_after_decoding"], metrics.get("approx_pointwise_accuracy_viterbi"))
     return {"trip_id": request.trip_id, "mode": MODE, "metrics": metrics, "gps": gps,
-            "road_lines": road_lines, "predicted_lines": route_lines,
+            "road_lines": road_lines, "reference_lines": reference_lines, "predicted_lines": route_lines,
             "metric_note": "Pointwise accuracy uses the nearest reference-route arc as a proxy; the source does not provide a GPS-to-arc label for every point."}
