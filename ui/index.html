@@ -16,9 +16,15 @@
     .badge{display:inline-block;background:#e8f0fc;color:#174f91;border-radius:20px;padding:5px 10px;font-size:12px;font-weight:700}
     .metrics{display:flex;gap:12px;flex-wrap:wrap}.metric{min-width:160px;background:#f3f7fc;border-radius:8px;padding:12px}
     .metric strong{display:block;font-size:22px;margin-top:5px}.metric span{font-size:12px;color:#52657b}
-    .map-wrap{height:510px;background:#f8fafc;border:1px solid #dce5ef;border-radius:8px;overflow:hidden}
-    svg{width:100%;height:100%}.legend{display:flex;gap:18px;margin:12px 0;color:#52657b;font-size:13px}
-    .dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px}
+    .map-wrap{height:min(68vh,680px);min-height:420px;background:#f7f9fc;border:1px solid #dce5ef;border-radius:8px;overflow:hidden}
+    svg{width:100%;height:100%;display:block}.map-legend{display:flex;gap:10px 20px;flex-wrap:wrap;margin:12px 0;color:#34465b;font-size:13px}
+    .layer-toggle{display:flex;align-items:center;gap:7px;padding:7px 10px;border:1px solid #dce5ef;border-radius:8px;background:#fbfcfe;cursor:pointer}
+    .layer-toggle input{width:auto;margin:0;accent-color:#174f91}.layer-toggle span{white-space:nowrap}
+    .legend-line{width:26px;height:0;border-top:4px solid;display:inline-block}
+    .legend-line.actual{border-color:#d55e00;border-top-style:dashed}.legend-line.predicted{border-color:#009e73}
+    .legend-line.roads{border-color:#b9c4d0;border-top-width:2px}
+    .legend-gps{width:12px;height:12px;background:#0072b2;border:2px solid white;box-shadow:0 0 0 1px #16405e;border-radius:50%;display:inline-block}
+    .map-hint{margin:8px 0 0;color:#61738a;font-size:12px;line-height:1.5}
     small{color:#61738a;line-height:1.5}
   </style>
 </head>
@@ -36,7 +42,16 @@
     <div id="status" class="status">Enter Laptop 1's local IP address and connect.</div>
   </section>
   <section class="card"><h2>Results</h2><div id="metrics" class="metrics"><small>Select a trip to run inference.</small></div><p><small id="note"></small></p></section>
-  <section class="card"><h2>Route view</h2><div class="legend"><span><i class="dot" style="background:#a8b7c7"></i>Nearby roads</span><span id="reference-key"><i class="dot" style="background:#e38b32"></i>Original/reference route</span><span><i class="dot" style="background:#2779d1"></i>Car's recorded GPS trace</span><span><i class="dot" style="background:#19a873"></i>Our predicted route</span></div><div class="map-wrap"><svg id="map" viewBox="0 0 1000 600" role="img" aria-label="Reference road route, recorded GPS trace, and predicted road route"></svg></div><p><small>Orange is the provided .route answer when available; blue connects recorded GPS samples and is only an approximation of the car's exact path. The map works without online tiles.</small></p></section>
+  <section class="card"><h2>Route view</h2>
+    <div class="map-legend" aria-label="Map layer controls">
+      <label class="layer-toggle"><input type="checkbox" data-layer-toggle="gps" checked><i class="legend-gps"></i><span>Raw GPS points</span></label>
+      <label class="layer-toggle" id="actual-toggle"><input type="checkbox" data-layer-toggle="actual" checked><i class="legend-line actual"></i><span>Actual path</span></label>
+      <label class="layer-toggle"><input type="checkbox" data-layer-toggle="predicted" checked><i class="legend-line predicted"></i><span>Predicted path</span></label>
+      <label class="layer-toggle"><input type="checkbox" data-layer-toggle="roads" checked><i class="legend-line roads"></i><span>Nearby roads</span></label>
+    </div>
+    <div class="map-wrap"><svg id="map" viewBox="0 0 1000 600" role="img" aria-label="Map showing raw GPS points, actual path, predicted path, and nearby roads"></svg></div>
+    <p class="map-hint">Actual path: orange dashed · Predicted path: solid green · GPS observations: blue dots with a dotted trace. Toggle layers to compare overlapping routes.</p>
+  </section>
 </main>
 <script>
 const $=id=>document.getElementById(id);
@@ -74,20 +89,37 @@ function renderMetrics(m){
 }
 function renderMap(data){
   const svg=$('map');svg.replaceChildren();
-  const reference=data.reference_lines||[];
-  $('reference-key').hidden=!reference.length;
+  const reference=data.reference_lines||data.actual_lines||[];
+  $('actual-toggle').hidden=!reference.length;
   // Fit the view to this trip; distant road candidates can otherwise shrink the routes to a dot.
   const pts=[...data.gps,...reference.flat(),...data.predicted_lines.flat()];
   if(!pts.length)return;
-  const xs=pts.map(p=>p[0]),ys=pts.map(p=>p[1]);let x0=Math.min(...xs),x1=Math.max(...xs),y0=Math.min(...ys),y1=Math.max(...ys);
-  const dx=Math.max(x1-x0,1e-7),dy=Math.max(y1-y0,1e-7),pad=.04;
-  function xy(p){return [40+920*(p[0]-x0)/dx,560-520*(p[1]-y0)/dy]}
-  function line(points,color,width,opacity,dash=''){const path=document.createElementNS('http://www.w3.org/2000/svg','path');path.setAttribute('d',points.map((p,i)=>{const q=xy(p);return(i?'L':'M')+q[0].toFixed(1)+' '+q[1].toFixed(1)}).join(' '));path.setAttribute('fill','none');path.setAttribute('stroke',color);path.setAttribute('stroke-width',width);path.setAttribute('opacity',opacity);if(dash)path.setAttribute('stroke-dasharray',dash);svg.appendChild(path)}
-  for(const segment of data.road_lines)line(segment,'#a8b7c7',1,.6);
-  for(const segment of reference)line(segment,'#e38b32',7,.9,'12 7');
-  if(data.gps.length>1)line(data.gps,'#2779d1',2,.65);
-  for(const segment of data.predicted_lines)line(segment,'#19a873',3,.95);
-  for(const p of data.gps){const q=xy(p),circle=document.createElementNS('http://www.w3.org/2000/svg','circle');circle.setAttribute('cx',q[0]);circle.setAttribute('cy',q[1]);circle.setAttribute('r',1.7);circle.setAttribute('fill','#2779d1');circle.setAttribute('opacity',.7);svg.appendChild(circle)}
+  const meanLat=pts.reduce((sum,p)=>sum+p[1],0)/pts.length,cosLat=Math.max(Math.cos(meanLat*Math.PI/180),.01);
+  const projected=pts.map(p=>[p[0]*cosLat,p[1]]);
+  const x0=Math.min(...projected.map(p=>p[0])),x1=Math.max(...projected.map(p=>p[0]));
+  const y0=Math.min(...projected.map(p=>p[1])),y1=Math.max(...projected.map(p=>p[1]));
+  const dx=Math.max(x1-x0,1e-9),dy=Math.max(y1-y0,1e-9),scale=Math.min(920/dx,520/dy);
+  const left=(1000-dx*scale)/2,top=(600-dy*scale)/2;
+  function xy(p){return [left+(p[0]*cosLat-x0)*scale,top+(y1-p[1])*scale]}
+  const ns='http://www.w3.org/2000/svg';
+  function makeLayer(name){const group=document.createElementNS(ns,'g');group.dataset.layer=name;svg.appendChild(group);return group}
+  const layers={roads:makeLayer('roads'),predicted:makeLayer('predicted'),actual:makeLayer('actual'),gps:makeLayer('gps')};
+  function line(group,points,color,width,dash,label){
+    if(!points.length)return;
+    const d=points.map((p,i)=>{const q=xy(p);return(i?'L':'M')+q[0].toFixed(1)+' '+q[1].toFixed(1)}).join(' ');
+    const addPath=(stroke,strokeWidth)=>{const path=document.createElementNS(ns,'path');path.setAttribute('d',d);path.setAttribute('fill','none');path.setAttribute('stroke',stroke);path.setAttribute('stroke-width',strokeWidth);path.setAttribute('stroke-linecap','round');path.setAttribute('stroke-linejoin','round');path.setAttribute('vector-effect','non-scaling-stroke');if(dash)path.setAttribute('stroke-dasharray',dash);group.appendChild(path);return path};
+    addPath('#fff',width+4);const path=addPath(color,width);path.setAttribute('opacity','.98');
+    const title=document.createElementNS(ns,'title');title.textContent=label;path.appendChild(title);
+  }
+  for(const segment of data.road_lines)line(layers.roads,segment,'#b9c4d0',1.5,'','Nearby road');
+  for(const segment of data.predicted_lines)line(layers.predicted,segment,'#009e73',5,'','Predicted path');
+  for(const segment of reference)line(layers.actual,segment,'#d55e00',4,'10 7','Actual/reference path');
+  if(data.gps.length>1)line(layers.gps,data.gps,'#0072b2',2,'2 7','GPS observation trace (approximate)');
+  data.gps.forEach((p,index)=>{const q=xy(p),circle=document.createElementNS(ns,'circle');circle.setAttribute('cx',q[0]);circle.setAttribute('cy',q[1]);circle.setAttribute('r',4.5);circle.setAttribute('fill','#0072b2');circle.setAttribute('stroke','#fff');circle.setAttribute('stroke-width','2');circle.setAttribute('vector-effect','non-scaling-stroke');const title=document.createElementNS(ns,'title');title.textContent=`Raw GPS observation ${index+1}`;circle.appendChild(title);layers.gps.appendChild(circle)});
+  document.querySelectorAll('[data-layer-toggle]').forEach(toggle=>{
+    const layer=layers[toggle.dataset.layerToggle];if(!layer)return;
+    layer.style.display=toggle.checked?'':'none';toggle.onchange=()=>{layer.style.display=toggle.checked?'':'none'};
+  });
 }
 // Optional demo URL for a real screenshot: ?api=http://127.0.0.1:8000&trip=00000052
 const params=new URLSearchParams(location.search);
