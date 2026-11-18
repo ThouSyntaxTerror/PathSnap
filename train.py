@@ -165,7 +165,12 @@ def main():
     search_space = search_spaces[best_name]
     study = optuna.create_study(direction="maximize", sampler=optuna.samplers.TPESampler(seed=42))
     study.optimize(objective, n_trials=args.trials)
-    tuned = models()[best_name].set_params(**study.best_params)
+    # The deployed model must use the same fixed settings as the Optuna
+    # objective. The HGB baseline uses l2_regularization=0.1, whereas the
+    # search candidates use the library default (0.0).
+    tuned = (HistGradientBoostingClassifier(**study.best_params, random_state=42)
+             if best_name == "hist_gradient_boosting"
+             else models()[best_name].set_params(**study.best_params))
     tuned.fit(x, y)
     joblib.dump(tuned, args.output / "final_model.joblib")
     results["selection"] = {"family": best_name, "criterion": "highest mean grouped training-CV macro F1; student-test used for reporting only",

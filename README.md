@@ -33,6 +33,18 @@ The folder must contain trip subfolders with matching `.track`, `.nodes`, `.arcs
 
 ## Retrain and regenerate results
 
+## Ordered evaluation notebooks
+
+The five executed notebooks in the repository root are:
+
+1. `01_PathSnap_EDA_and_Preprocessing.ipynb` — raw-data audit, cleaning, GPS/road plots, and an interactive Folium map.
+2. `02_PathSnap_Feature_Engineering.ipynb` — six candidate features, real values, distributions, and road-candidate geometry.
+3. `03_PathSnap_Model_Training_and_Evaluation.ipynb` — five models, grouped CV, metrics, confusion matrices, and comparison plots.
+4. `04_PathSnap_Bayesian_Hyperparameter_Optimisation.ipynb` — five Optuna TPE trials and fair untuned/tuned comparison.
+5. `05_PathSnap_HMM_Viterbi_Route_Reconstruction.ipynb` — hidden arc states, emission/transition scores, before/after results, and route plots.
+
+They include saved outputs. To rerun them, place them in this repository root, set `PATHSNAP_DATA_ROOT` to the extracted student folder, install `requirements.txt`, and open Jupyter Notebook. The standalone report draft is `artifacts/PathSnap_Technical_Report_DRAFT.pdf`; add a real API-log screenshot from the final two-laptop demonstration before submission.
+
 ```powershell
 py -3.12 train.py --data 'C:\path\to\Student folder' --output artifacts --train-points-per-trip 120 --test-points-per-trip 250 --trials 5
 py -3.12 inventory.py --data 'C:\path\to\Student folder' --output artifacts

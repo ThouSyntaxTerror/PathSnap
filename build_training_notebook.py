@@ -174,6 +174,12 @@ ax = summary[["Route continuity before Viterbi (%)", "Route continuity after Vit
 ax.set_ylabel("Valid consecutive road steps (%)")
 ax.set_title("Route continuity improves after Viterbi decoding")
 plt.tight_layout()
+plt.show()
+fig, axes = plt.subplots(1, 3, figsize=(15, 3.8), layout="constrained")
+summary["CV macro F1"].plot.bar(ax=axes[0], ylim=(0, 1), color="#5388ba", rot=30, title="Grouped CV macro F1")
+summary[["Top-1 GPS accuracy", "Candidate macro F1"]].plot.bar(ax=axes[1], ylim=(0, 1), rot=30, title="Student-test Top-1 and macro F1")
+summary["Log loss"].plot.bar(ax=axes[2], color="#8d70b3", rot=30, title="Student-test log loss (lower is better)")
+axes[1].legend(fontsize=7)
 plt.show()'''),
     ]
     return nbf.v4.new_notebook(cells=cells, metadata={"kernelspec": {"display_name": "Python 3", "language": "python", "name": "python3"},
