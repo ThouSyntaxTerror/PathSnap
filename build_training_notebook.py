@@ -145,7 +145,7 @@ Histogram Gradient Boosting had the strongest sampled **after-Viterbi** proxy po
 The reserved evaluator trips are not used here. These pointwise labels are derived from reference routes and should not be described as independently verified ground truth. Training and inference times can vary across machines."""),
         nbf.v4.new_markdown_cell("""## Final model evaluation and comparison
 
-This final cell compares all five models using the same metrics. The five model cells above contain the evaluation code, metrics, plots, and confusion matrices. Selection is based on the **complete route pipeline** (after Viterbi) along with CV F1 and log loss, not candidate accuracy alone."""),
+This final cell compares all five models using the same metrics. The five model cells above contain the evaluation code, metrics, plots, and confusion matrices. The final family is selected using grouped **training CV macro F1**; student-test route metrics are reported separately."""),
         nbf.v4.new_code_cell('''summary = pd.DataFrame({name: {
     "Candidate accuracy": m["candidate_accuracy"],
     "Precision": m["precision"],

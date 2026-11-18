@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import csv
+import numpy as np
 from pathlib import Path
 
 from reportlab.lib import colors
@@ -42,6 +43,8 @@ def table(rows, widths=None):
 
 
 def percent(x): return f"{100*x:.1f}%"
+def full_continuity(row, phase):
+    return row.get(f"continuity_{phase}", row.get(f"route_continuity_{phase}"))
 def footer(canvas, doc):
     canvas.setFont("Helvetica", 8); canvas.setFillColor(colors.HexColor("#6b7f93"))
     canvas.drawString(1.6*cm, 1.2*cm, "PathSnap | measured student-test results | working draft")
@@ -78,7 +81,23 @@ for name, v in RESULTS["models"].items():
 story += [table(rows, [4.0*cm, 2.3*cm, 2.2*cm, 2.5*cm, 2.1*cm, 3.3*cm]), Spacer(1, 9)]
 story += [Image(str(OUT / "model_comparison.png"), width=17.0*cm, height=8.5*cm), p("Figure 2. Grouped cross-validation and student-test comparisons using measured results.", "CaptionX")]
 story += [Image(str(OUT / "log_loss_comparison.png"), width=17.0*cm, height=3.0*cm), p("Figure 3. Candidate log loss on the student-test observations; lower is better.", "CaptionX")]
-story += [p("The mean candidate miss rate on sampled student-test observations was 1.96%. Gaussian Naive Bayes had the best independent Top-1 score (0.762), but Histogram Gradient Boosting had the best sampled route-level accuracy after Viterbi (0.765). We therefore selected Histogram Gradient Boosting for the complete pipeline. The margin is small; the result is sensitive to proxy labels and sampling.")]
+if (OUT / "confusion_matrices.png").exists():
+    story += [Image(str(OUT / "confusion_matrices.png"), width=17.0*cm, height=5.5*cm),
+              p("Figure 4. Student-test candidate confusion matrices; cells show counts and within-class percentages.", "CaptionX")]
+best_top1 = max(RESULTS["models"], key=lambda name: RESULTS["models"][name]["mean_trip_top1_accuracy"])
+best_viterbi = max(RESULTS["models"], key=lambda name: RESULTS["models"][name]["mean_trip_accuracy_viterbi"])
+sel = RESULTS.get("selection", {})
+selected_name = sel.get("family", "unknown")
+selection_criterion = sel.get("criterion", "selection metadata missing; rerun train.py")
+stale_selection_note = (" The saved results predate the current training-only selection rule; rerun train.py before using this model or report for submission."
+                        if "student-test" in selection_criterion.lower() and "reporting only" not in selection_criterion.lower()
+                        else "")
+mean_miss_rate = float(np.mean([v["mean_candidate_miss_rate"] for v in RESULTS["models"].values()]))
+story += [p(f"The mean candidate miss rate on sampled student-test observations was {percent(mean_miss_rate)}. "
+             f"{best_top1.replace('_', ' ').title()} had the best independent Top-1 score ({RESULTS['models'][best_top1]['mean_trip_top1_accuracy']:.3f}); "
+             f"{best_viterbi.replace('_', ' ').title()} had the best sampled route-level accuracy after Viterbi ({RESULTS['models'][best_viterbi]['mean_trip_accuracy_viterbi']:.3f}). "
+             f"{selected_name.replace('_', ' ').title()} was selected using: {selection_criterion}. "
+             "The margin is small; results are sensitive to proxy labels and sampling." + stale_selection_note)]
 story += [PageBreak(), h("3.1 Individual model notes")]
 notes = {
     "logistic_regression": "A fast linear baseline with interpretable feature effects. It cannot capture all interactions between distance, direction, and speed without explicit feature crosses.",
@@ -105,16 +124,16 @@ story += [h("4. Bayesian hyperparameter optimisation")]
 sel = RESULTS["selection"]
 baseline = RESULTS["models"][sel["family"]]
 tuned = sel["tuned_student_test"]
-story += [p(f"Optuna's TPE sampler ran {len(sel['trials'])} trials with three-fold grouped training CV, optimising candidate-level macro F1. Search parameters were max_iter (40-120), max_leaf_nodes (10-40), and learning_rate (0.03-0.2, log scale). Best parameters: {sel['best_parameters']}. Untuned versus tuned student-test after-Viterbi accuracy: {baseline['mean_trip_accuracy_viterbi']:.4f} versus {tuned['mean_trip_accuracy_viterbi']:.4f}. All trials and values are saved in experiment_results.json. The tuning gain is modest.")]
+story += [p(f"Optuna's TPE sampler ran {len(sel['trials'])} trials with three-fold grouped training CV, optimising macro F1. Recorded search space: {sel.get('search_space', 'not recorded in this older run')}. Best parameters: {sel['best_parameters']}. Untuned versus tuned student-test after-Viterbi accuracy: {baseline['mean_trip_accuracy_viterbi']:.4f} versus {tuned['mean_trip_accuracy_viterbi']:.4f}. All trials and values are saved in experiment_results.json. These student-test scores are for reporting only.")]
 story += [PageBreak(), h("5. HMM/Viterbi route reconstruction")]
 story += [p("Hidden states are the six candidate arc IDs at each observation. Emission scores are the selected classifier's candidate probabilities. Transition penalties favour the same arc, then directly connected arcs (previous arc's end node equals current arc's start node). For disconnected candidates, a spatial endpoint-distance fallback allows recovery from missing candidates and GPS gaps; its penalty is scaled by elapsed time. Viterbi dynamic programming selects the highest-scoring sequence. After decoding, the API attempts directed shortest-path bridges and rejects implausibly long ones, reporting unresolved connections. This is a connectivity-aware approximation, not a full graph-shortest-path decoder.")]
 story += [p(f"On the sampled student-test comparison, the untuned selected model's mean direct-adjacency continuity changed from {percent(baseline['mean_continuity_classifier'])} before decoding to {percent(baseline['mean_continuity_viterbi'])} after decoding. Its mean proxy pointwise accuracy changed from {percent(baseline['mean_trip_top1_accuracy'])} to {percent(baseline['mean_trip_accuracy_viterbi'])}. The tuned model's corresponding values were {percent(tuned['mean_continuity_classifier'])} to {percent(tuned['mean_continuity_viterbi'])}, and {percent(tuned['mean_trip_top1_accuracy'])} to {percent(tuned['mean_trip_accuracy_viterbi'])}.")]
-story += [hh("Full student-test rehearsal"), p(f"The final API was run against all {len(FULL)} student-test trips using every GPS observation ({sum(r['gps_points'] for r in FULL):,} total). Mean per-trip proxy accuracy changed from {percent(sum(r['approx_accuracy_before'] for r in FULL)/len(FULL))} to {percent(sum(r['approx_accuracy_after'] for r in FULL)/len(FULL))}; mean direct-adjacency continuity changed from {percent(sum(r['continuity_before'] for r in FULL)/len(FULL))} to {percent(sum(r['continuity_after'] for r in FULL)/len(FULL))}. The post-decoding road-graph step inserted {sum(r['bridge_arcs_inserted'] for r in FULL):,} connecting arcs and left {sum(r['unresolved_connections'] for r in FULL):,} transitions unresolved across the ten trips. Per-trip values are in full_student_test_results.json. These rehearsal results are not evaluator-test scores.")]
+story += [hh("Full student-test rehearsal"), p(f"The final API was run against all {len(FULL)} student-test trips using every GPS observation ({sum(r['gps_points'] for r in FULL):,} total). Mean per-trip proxy accuracy changed from {percent(sum(r['approx_accuracy_before'] for r in FULL)/len(FULL))} to {percent(sum(r['approx_accuracy_after'] for r in FULL)/len(FULL))}; mean direct-adjacency continuity changed from {percent(sum(full_continuity(r, 'before') for r in FULL)/len(FULL))} to {percent(sum(full_continuity(r, 'after') for r in FULL)/len(FULL))}. The post-decoding road-graph step inserted {sum(r['bridge_arcs_inserted'] for r in FULL):,} connecting arcs and left {sum(r['unresolved_connections'] for r in FULL):,} transitions unresolved across the ten trips. Per-trip values are in full_student_test_results.json. These rehearsal results are not evaluator-test scores.")]
 story += [h("6. Folium geographical visualisation")]
-story += [Image(str(OUT / "folium_trip_00000052.png"), width=16.7*cm, height=10.5*cm), p("Figure 4. Actual Folium map of student-test trip 00000052. Blue: GPS; grey: nearby roads; orange: reference route; green: prediction. Interactive HTML with layer controls is included.", "CaptionX")]
+story += [Image(str(OUT / "folium_trip_00000052.png"), width=16.7*cm, height=10.5*cm), p("Figure 5. Actual Folium map of student-test trip 00000052. Blue: GPS; grey: nearby roads; orange: reference route; green: prediction. Interactive HTML with layer controls is included.", "CaptionX")]
 story += [PageBreak(), h("7. API, UI, and two-laptop deployment")]
 story += [p("Laptop 1 runs FastAPI, loads final_model.joblib, retains all road and reference-route files, and logs each inference request and result. Laptop 2 hosts a browser UI. The evaluator selects a trip ID; the UI sends only that ID to POST /predict. Laptop 1 computes the prediction and metrics, returning predicted geometry and summary numbers. No reference-route IDs or geometry are sent to the UI. The ten provided student-test trips are the current rehearsal set; set PATHSNAP_EVAL_ROOT to the reserved evaluator-trip folder for final evaluation.")]
-story += [Image(str(OUT / "ui_demo.png"), width=16.7*cm, height=12.5*cm), p("Figure 5. Working UI response for student-test rehearsal trip 00000052.", "CaptionX")]
+story += [Image(str(OUT / "ui_demo.png"), width=16.7*cm, height=12.5*cm), p("Figure 6. Working UI response for student-test rehearsal trip 00000052.", "CaptionX")]
 story += [h("Limitations and remaining final-demo evidence")]
 story += [p("The source does not supply pointwise GPS-to-arc ground truth, so pointwise scores use nearest-reference-arc proxy labels. Six candidates can miss a reference arc, and endpoint-based transitions plus post-decoding bridges do not guarantee a fully connected path. The final evaluator trips are unavailable in the student package. Capture the required Laptop 1 CMD/API-log screenshot during the live two-laptop demonstration and add it to the final submitted report; this draft does not invent that screenshot.")]
 

@@ -17,7 +17,7 @@ from sklearn.model_selection import GroupKFold
 from sklearn.naive_bayes import GaussianNB
 from sklearn.tree import DecisionTreeClassifier
 
-from pathsnap import Trip, make_rows, decode, continuity, top1_accuracy, FEATURE_NAMES
+from pathsnap import Trip, make_rows, decode, route_continuity as continuity, top1_accuracy, FEATURE_NAMES
 
 
 def models():
@@ -112,26 +112,31 @@ def main():
                            "training_candidate_rows": len(y), "positive_rate": float(y.mean()),
                            "label_method": "nearest reference-route arc to each GPS observation (heuristic)"},
                "features": FEATURE_NAMES, "models": {}}
-    best_name, best_score = None, -1
+    fitted = {}
     for name, model in models().items():
         print(f"Training {name}", flush=True)
         start = time.perf_counter()
         cv = grouped_cv(model, x, y, groups, folds=3)
         model.fit(x, y)
         train_seconds = time.perf_counter() - start
-        measured = score_model(model, test_trips)
         train_macro_f1 = float(f1_score(y, model.predict(x), average="macro", zero_division=0))
-        measured.update({"cv_macro_f1": cv, "cv_macro_f1_mean": float(np.mean(cv)), "train_macro_f1": train_macro_f1,
-                         "training_seconds_including_cv": train_seconds,
-                         "parameters": model.get_params()})
-        results["models"][name] = measured
+        results["models"][name] = {"cv_macro_f1": cv, "cv_macro_f1_mean": float(np.mean(cv)),
+                                    "train_macro_f1": train_macro_f1,
+                                    "training_seconds_including_cv": train_seconds,
+                                    "parameters": model.get_params()}
+        fitted[name] = model
         joblib.dump(model, args.output / f"{name}.joblib")
-        print(f"{name}: CV F1={np.mean(cv):.4f}; student top-1={measured['mean_trip_top1_accuracy']:.4f}", flush=True)
-        if measured["mean_trip_accuracy_viterbi"] > best_score:
-            best_name, best_score = name, measured["mean_trip_accuracy_viterbi"]
+        print(f"{name}: grouped training-CV macro F1={np.mean(cv):.4f}", flush=True)
         (args.output / "experiment_results.json").write_text(json.dumps(results, indent=2, default=str))
 
-    # Tune the best model family with grouped training CV. The student test does not guide these trials.
+    # Select the family using grouped training CV only; student-test results are reporting-only.
+    best_name = max(results["models"], key=lambda name: results["models"][name]["cv_macro_f1_mean"])
+    results["selection_phase1"] = {"family": best_name, "criterion": "highest mean grouped training-CV macro F1"}
+    for name, model in fitted.items():
+        results["models"][name].update(score_model(model, test_trips))
+    (args.output / "experiment_results.json").write_text(json.dumps(results, indent=2, default=str))
+
+    # Tune the selected family with grouped training CV only.
     def objective(trial):
         if best_name == "hist_gradient_boosting":
             candidate = HistGradientBoostingClassifier(max_iter=trial.suggest_int("max_iter", 40, 120),
@@ -150,12 +155,21 @@ def main():
         else:
             candidate = GaussianNB(var_smoothing=trial.suggest_float("var_smoothing", 1e-12, 1e-6, log=True))
         return float(np.mean(grouped_cv(candidate, x, y, groups, folds=3)))
+    search_spaces = {
+        "hist_gradient_boosting": {"max_iter": [40, 120], "max_leaf_nodes": [10, 40], "learning_rate": [0.03, 0.2], "learning_rate_log": True},
+        "random_forest": {"n_estimators": [30, 100], "max_depth": [6, 20], "min_samples_leaf": [2, 20]},
+        "decision_tree": {"max_depth": [4, 24], "min_samples_leaf": [2, 30]},
+        "logistic_regression": {"C": [0.01, 10], "C_log": True},
+        "gaussian_nb": {"var_smoothing": [1e-12, 1e-6], "var_smoothing_log": True},
+    }
+    search_space = search_spaces[best_name]
     study = optuna.create_study(direction="maximize", sampler=optuna.samplers.TPESampler(seed=42))
     study.optimize(objective, n_trials=args.trials)
     tuned = models()[best_name].set_params(**study.best_params)
     tuned.fit(x, y)
     joblib.dump(tuned, args.output / "final_model.joblib")
-    results["selection"] = {"family": best_name, "criterion": "student-test mean trip accuracy after Viterbi among five initial models (nearest-reference-arc proxy)",
+    results["selection"] = {"family": best_name, "criterion": "highest mean grouped training-CV macro F1; student-test used for reporting only",
+                            "search_space": search_space,
                             "best_parameters": study.best_params, "best_cv_macro_f1": study.best_value,
                             "tuned_student_test": score_model(tuned, test_trips),
                             "trials": [{"number": t.number, "value": t.value, "params": t.params} for t in study.trials]}
