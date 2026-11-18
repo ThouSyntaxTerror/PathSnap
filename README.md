@@ -40,6 +40,7 @@ py -3.12 feature_example.py --data 'C:\path\to\Student folder' --output artifact
 py -3.12 evaluate_full.py --data 'C:\path\to\Student folder' --output artifacts
 py -3.12 generate_assets.py --data 'C:\path\to\Student folder' --output artifacts
 py -3.12 make_report.py
+py -3.12 make_first_eval_guide.py
 ```
 
 `train.py` uses all 80 training trips, sampling at most 120 GPS observations per trip to fit within hackathon time. The five models are Logistic Regression, Gaussian Naive Bayes, Decision Tree, Random Forest, and Histogram Gradient Boosting. Three-fold GroupKFold separates trips. Selection uses the ten student-test trips' mean accuracy **after** Viterbi, then Optuna TPE tunes the selected family with grouped training CV. All model settings, timings, metrics, and tuning trials are in `artifacts/experiment_results.json`.
@@ -72,6 +73,7 @@ The Viterbi decoder favours staying on the same arc, then moving to a directly c
 - `ui/index.html`: Laptop 2 interface, no JavaScript dependencies or online map tiles
 - `generate_assets.py`: real comparison plot and interactive Folium map
 - `make_report.py`: generated technical report draft
+- `make_first_eval_guide.py`: short first-evaluation PDF tied to the source code and recorded metrics
 - `VIVA_GUIDE.md`: short explanations of the required metrics and likely evaluator questions
 - `artifacts/`: trained models, actual results, maps, screenshots, report draft
 
