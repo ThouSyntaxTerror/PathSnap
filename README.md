@@ -43,6 +43,8 @@ py -3.12 make_report.py
 py -3.12 make_first_eval_guide.py
 ```
 
+To open the executed five-model notebook, set `PATHSNAP_DATA_ROOT` to the extracted student folder, then run `py -3.12 -m notebook PathSnap_Five_Model_Training.ipynb` (install `notebook` if needed). Each model has its own training/evaluation cell and confusion matrix; the last cell compares all five, including route continuity. The EDA cells show raw trip sizes, actual cleaning counts, and raw-versus-cleaned GPS positions.
+
 `train.py` uses all 80 training trips, sampling at most 120 GPS observations per trip to fit within hackathon time. The five models are Logistic Regression, Gaussian Naive Bayes, Decision Tree, Random Forest, and Histogram Gradient Boosting. Three-fold GroupKFold separates trips. Selection uses the ten student-test trips' mean accuracy **after** Viterbi, then Optuna TPE tunes the selected family with grouped training CV. All model settings, timings, metrics, and tuning trials are in `artifacts/experiment_results.json`.
 
 `generate_assets.py` saves a comparison chart and an interactive Folium map of student-test trip `00000052`; its reference route is visible only in this development map, not in the evaluator UI. The report generator uses actual logged data and screenshots. The included PDF is a **draft**: capture and add the required Laptop 1 CMD/API-log screenshot during the actual two-laptop demonstration. Do not submit invented measurements or a fabricated screenshot.
@@ -57,6 +59,8 @@ Each trip contains:
 | `.nodes` | longitude, latitude | road graph coordinates; row number is node ID |
 | `.arcs` | from-node ID, to-node ID | directed road arcs; row number is arc ID |
 | `.route` | arc ID | chronological reference arc sequence |
+
+`Trip.load` applies the same cleaning to training and API inference: remove invalid/nonfinite GPS rows, sort timestamps, remove exact duplicate rows and conflicting same-time observations, then reject points requiring speed above 70 m/s (252 km/h) from the last retained point. Repeated coordinates at different times are kept because the vehicle may be stopped. The student data has 227,577 raw observations; this cleaning removes 177 high-speed observations and no invalid, duplicate, or conflicting-timestamp rows. The 70 m/s threshold is a conservative heuristic, not a verified physical label; inspect it if the evaluator data has different vehicle speeds.
 
 There is no one-to-one mapping from GPS rows to route rows. To construct approximate pointwise training labels, the code matches each GPS point to its nearest arc **among the reference-route arcs**. Evaluation pointwise accuracy uses the same proxy. This is not verified ground truth. Candidate generation searches arc endpoints and midpoints with a KD-tree, then measures exact point-to-segment distance in a local metre projection. A six-candidate search missed the proxy reference arc for 1.96% of sampled student-test observations. Some training trips have much larger miss rates; inspect those before claiming strong generalisation.
 

@@ -79,7 +79,7 @@ story += [table([
 
 totals = INVENTORY["totals"]
 story += [h("Dataset facts from the actual files"),
-          p(f"The supplied folder has 80 training trips and 10 student-test trips, with {totals['gps_points']:,} GPS observations in total. Each trip has .track (longitude, latitude, time), .nodes (road coordinates), .arcs (from-node ID, to-node ID), and .route (reference arc IDs). We found {totals['invalid_gps_rows']} invalid GPS rows and {totals['nonincreasing_time_steps']} nonincreasing timestamps. {pct(totals['one_second_steps']/totals['time_steps'])} of time steps were one second. {totals['trips_with_multiple_components']} road graphs have multiple undirected components. Reserved evaluator trips were not supplied or used.")]
+          p(f"The supplied folder has 80 training trips and 10 student-test trips, with {totals['raw_gps_points']:,} raw GPS observations; {totals['gps_points']:,} remain after cleaning. Each trip has .track (longitude, latitude, time), .nodes (road coordinates), .arcs (from-node ID, to-node ID), and .route (reference arc IDs). Cleaning found {totals['invalid_gps_rows']} invalid rows, {totals['duplicate_gps_rows_removed']} exact duplicates, {totals['timestamp_conflicts_removed']} timestamp conflicts, and removed {totals['gps_outlier_rows_removed']} speed outliers above 70 m/s. {pct(totals['one_second_steps']/totals['time_steps'])} of retained time steps were one second. {totals['trips_with_multiple_components']} road graphs have multiple undirected components. Reserved evaluator trips were not supplied or used.")]
 story += [Image(str(ART / "eda_summary.png"), width=16.7 * cm, height=5.0 * cm),
           p("Figure 1. Real trip-size, sampling, and geographic exploration from the student folder.", "CaptionX")]
 

@@ -8,6 +8,52 @@ from scipy.spatial import cKDTree
 import networkx as nx
 
 FEATURE_NAMES = ["log1p_distance_m", "direction_cos", "log1p_speed_mps", "log1p_segment_length_m", "log1p_time_gap_s", "log1p_movement_m"]
+MAX_GPS_SPEED_MPS = 70.0
+
+
+def clean_track(raw: np.ndarray, max_speed_mps: float = MAX_GPS_SPEED_MPS):
+    """Clean GPS rows before either training or inference; return rows and audit counts.
+
+    A speed over 70 m/s (252 km/h) is treated as an implausible jump.
+    A rejected point is compared again to the last retained point, so the
+    retained trajectory obeys the same threshold. Stationary repeats with
+    different timestamps are intentionally preserved.
+    """
+    if raw.ndim != 2 or raw.shape[1] != 3:
+        raise ValueError("GPS track must contain longitude, latitude, timestamp")
+    counts = {"raw_points": int(len(raw)), "invalid_rows": 0,
+              "duplicate_rows": 0, "timestamp_conflicts": 0,
+              "outlier_rows": 0, "timestamps_reordered": 0}
+    valid = (np.isfinite(raw).all(axis=1) & (np.abs(raw[:, 0]) <= 180) &
+             (np.abs(raw[:, 1]) <= 90))
+    counts["invalid_rows"] = int((~valid).sum())
+    rows = raw[valid]
+    if len(rows) == 0:
+        raise ValueError("GPS track has no valid observations")
+    order = np.argsort(rows[:, 2], kind="stable")
+    counts["timestamps_reordered"] = int(np.sum(order != np.arange(len(rows))))
+    rows = rows[order]
+    # Exact row duplicates are removed first. At a conflicting timestamp,
+    # keep the first observation because movement over zero seconds is undefined.
+    _, first = np.unique(rows, axis=0, return_index=True)
+    counts["duplicate_rows"] = len(rows) - len(first)
+    rows = rows[np.sort(first)]
+    _, first_time = np.unique(rows[:, 2], return_index=True)
+    counts["timestamp_conflicts"] = len(rows) - len(first_time)
+    rows = rows[np.sort(first_time)]
+    scale = np.array([111_320 * np.cos(np.deg2rad(np.mean(rows[:, 1]))), 111_320.0])
+    kept = [0]
+    for i in range(1, len(rows)):
+        previous = kept[-1]
+        elapsed = rows[i, 2] - rows[previous, 2]
+        speed = np.linalg.norm((rows[i, :2] - rows[previous, :2]) * scale) / elapsed
+        if speed > max_speed_mps:
+            counts["outlier_rows"] += 1
+        else:
+            kept.append(i)
+    cleaned = rows[kept]
+    counts["clean_points"] = int(len(cleaned))
+    return cleaned, counts
 
 
 def read_array(path: Path, columns: int, dtype=float) -> np.ndarray:
@@ -15,28 +61,6 @@ def read_array(path: Path, columns: int, dtype=float) -> np.ndarray:
     if array.shape[1] != columns:
         raise ValueError(f"{path}: expected {columns} columns, got {array.shape[1]}")
     return array
-
-
-def clean_track(track: np.ndarray) -> tuple[np.ndarray, dict]:
-    """Remove unusable GPS rows and return the cleaned track with a log of what was changed.
-
-    Steps: drop rows with non-finite values or impossible lon/lat, sort by time (stable),
-    and keep only the first observation for each duplicated timestamp.
-    """
-    log = {"input_rows": int(len(track))}
-    valid = np.all(np.isfinite(track), axis=1)
-    valid &= (np.abs(track[:, 0]) <= 180) & (np.abs(track[:, 1]) <= 90)
-    log["dropped_invalid"] = int(len(track) - valid.sum())
-    track = track[valid]
-    order = np.argsort(track[:, 2], kind="stable")
-    log["was_unsorted"] = bool(np.any(order != np.arange(len(order))))
-    track = track[order]
-    keep = np.ones(len(track), dtype=bool)
-    keep[1:] = np.diff(track[:, 2]) != 0
-    log["dropped_duplicate_time"] = int(len(track) - keep.sum())
-    track = track[keep]
-    log["output_rows"] = int(len(track))
-    return track, log
 
 
 @dataclass
@@ -196,6 +220,10 @@ def route_continuity(trip: Trip, arcs: np.ndarray) -> float:
     same = arcs[:-1] == arcs[1:]
     touch = a[:, 1] == b[:, 0]
     return float(np.mean(same | touch))
+
+
+# Keep the training script's existing import name compatible with the UI name.
+continuity = route_continuity
 
 
 def bridge_route(trip: Trip, road: RoadIndex, chosen: np.ndarray):
