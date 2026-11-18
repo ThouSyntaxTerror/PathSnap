@@ -96,6 +96,7 @@ for name, model in [("Untuned HGB", baseline), ("Tuned HGB", tuned)]:
         "Student after-Viterbi proxy accuracy": student["mean_trip_accuracy_viterbi"],
         "Route continuity before Viterbi": student["mean_continuity_classifier"],
         "Route continuity after Viterbi": student["mean_continuity_viterbi"],
+        "Continuity change (percentage points)": 100*(student["mean_continuity_viterbi"]-student["mean_continuity_classifier"]),
     }
 comparison = pd.DataFrame(records).T
 comparison.loc["Tuned − untuned"] = comparison.loc["Tuned HGB"] - comparison.loc["Untuned HGB"]
@@ -220,6 +221,9 @@ display(full[["gps_points", "Accuracy change (pp)", "Continuity change (pp)", "u
 print("Full-trip mean accuracy gain (pp):", round(full["Accuracy change (pp)"].mean(), 2))
 print("Full-trip mean continuity gain (pp):", round(full["Continuity change (pp)"].mean(), 2))
 print("Full-trip unresolved connections:", int(full["unresolved_connections"].sum()))"""),
+        M("""### Highest accuracy: name the metric
+
+The highest candidate-classification accuracy in the five-model student-test table was **90.48%** for the untuned Histogram Gradient Boosting classifier. It was achieved by classifying each GPS–candidate-arc row at the 0.5 probability threshold; it is not the accuracy of the final decoded route. After tuning, candidate accuracy was 90.46%. The best full-trip decoded pointwise proxy accuracy average was 78.30%. Route continuity reached 97.10% after Viterbi, but continuity measures connected neighboring arcs, not route accuracy. Do not report the 97.10% continuity as accuracy."""),
         M("""## 4. See the route change on one trip
 
 Blue dots are the observed GPS samples, orange is the provided reference route (evaluation only), and green shows the model's chosen road arcs. The left panel uses independent classifier choices; the right panel uses Viterbi decoding. The reference route is never passed into the prediction model or decoder."""),

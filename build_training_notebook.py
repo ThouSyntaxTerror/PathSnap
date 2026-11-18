@@ -142,6 +142,8 @@ hist_model = evaluate_one_model("Histogram Gradient Boosting", HistGradientBoost
 
 Histogram Gradient Boosting had the strongest sampled **after-Viterbi** proxy pointwise accuracy among the five initial models. Gaussian Naive Bayes had a slightly stronger classifier-only Top-1 score, so report both. The training script separately performs Bayesian tuning on the selected model; its saved results are in `artifacts/experiment_results.json`.
 
+The highest candidate-classification accuracy in this five-model comparison was **90.48%**, from untuned Histogram Gradient Boosting with a 0.5 probability threshold. It is a candidate-row metric, not final route accuracy. The tuned HGB candidate accuracy was 90.46%.
+
 The reserved evaluator trips are not used here. These pointwise labels are derived from reference routes and should not be described as independently verified ground truth. Training and inference times can vary across machines."""),
         nbf.v4.new_markdown_cell("""## Final model evaluation and comparison
 
