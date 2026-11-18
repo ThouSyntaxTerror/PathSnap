@@ -1,7 +1,7 @@
 """Raw trip loading, candidate road features, and route decoding."""
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 import numpy as np
 from scipy.spatial import cKDTree
@@ -17,6 +17,28 @@ def read_array(path: Path, columns: int, dtype=float) -> np.ndarray:
     return array
 
 
+def clean_track(track: np.ndarray) -> tuple[np.ndarray, dict]:
+    """Remove unusable GPS rows and return the cleaned track with a log of what was changed.
+
+    Steps: drop rows with non-finite values or impossible lon/lat, sort by time (stable),
+    and keep only the first observation for each duplicated timestamp.
+    """
+    log = {"input_rows": int(len(track))}
+    valid = np.all(np.isfinite(track), axis=1)
+    valid &= (np.abs(track[:, 0]) <= 180) & (np.abs(track[:, 1]) <= 90)
+    log["dropped_invalid"] = int(len(track) - valid.sum())
+    track = track[valid]
+    order = np.argsort(track[:, 2], kind="stable")
+    log["was_unsorted"] = bool(np.any(order != np.arange(len(order))))
+    track = track[order]
+    keep = np.ones(len(track), dtype=bool)
+    keep[1:] = np.diff(track[:, 2]) != 0
+    log["dropped_duplicate_time"] = int(len(track) - keep.sum())
+    track = track[keep]
+    log["output_rows"] = int(len(track))
+    return track, log
+
+
 @dataclass
 class Trip:
     trip_id: str
@@ -24,20 +46,23 @@ class Trip:
     nodes: np.ndarray
     arcs: np.ndarray
     route: np.ndarray | None
+    cleaning: dict = field(default_factory=dict)
 
     @classmethod
     def load(cls, folder: Path, include_route: bool = False) -> "Trip":
         trip_id = folder.name
         route_path = folder / f"{trip_id}.route"
         route = read_array(route_path, 1, int).ravel() if include_route and route_path.exists() else None
-        track = read_array(folder / f"{trip_id}.track", 3)
+        track, cleaning = clean_track(read_array(folder / f"{trip_id}.track", 3))
+        if len(track) < 2:
+            raise ValueError(f"{trip_id}: fewer than two usable GPS observations after cleaning")
         nodes = read_array(folder / f"{trip_id}.nodes", 2)
         arcs = read_array(folder / f"{trip_id}.arcs", 2, int)
         if np.any(arcs < 0) or np.any(arcs >= len(nodes)):
             raise ValueError(f"{trip_id}: arc references invalid node")
         if route is not None and (np.any(route < 0) or np.any(route >= len(arcs))):
             raise ValueError(f"{trip_id}: route references invalid arc")
-        return cls(trip_id, track, nodes, arcs, route)
+        return cls(trip_id, track, nodes, arcs, route, cleaning)
 
 
 class RoadIndex:
@@ -126,7 +151,7 @@ def make_rows(trip: Trip, max_points: int | None = None, candidate_count: int = 
 
 
 def top1_accuracy(scores: np.ndarray, labels: np.ndarray) -> float:
-    covered = labels.any(axis=1)
+    """Share of observations whose highest-scoring candidate is the proxy reference arc."""
     return float(np.mean(labels[np.arange(len(scores)), np.argmax(scores, axis=1)])) if len(scores) else 0.0
 
 
@@ -158,7 +183,14 @@ def decode(trip: Trip, road: RoadIndex, point_ids: np.ndarray, candidates: np.nd
     return chosen
 
 
-def continuity(trip: Trip, arcs: np.ndarray) -> float:
+def route_continuity(trip: Trip, arcs: np.ndarray) -> float:
+    """Route continuity: share of consecutive observation-level arcs that form a valid step.
+
+    A step is valid when the next arc is the same arc (still on the road) or starts at the
+    node where the previous arc ends (directed road connection). Returns a value in [0, 1];
+    1.0 means every step is physically traversable without a gap, and it is 1.0 by convention
+    for sequences with fewer than two arcs.
+    """
     if len(arcs) < 2: return 1.0
     a, b = trip.arcs[arcs[:-1]], trip.arcs[arcs[1:]]
     same = arcs[:-1] == arcs[1:]

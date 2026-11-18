@@ -65,7 +65,7 @@ $('run').onclick=async()=>{
   }catch(e){setStatus('Prediction failed: '+e.message)}finally{$('run').disabled=false}
 };
 function renderMetrics(m){
-  const names={gps_points:'GPS points',continuity_classifier:'Continuity before Viterbi',continuity_viterbi:'Continuity after Viterbi',approx_pointwise_accuracy_classifier:'Approx. accuracy before',approx_pointwise_accuracy_viterbi:'Approx. accuracy after',reference_arc_recall:'Reference arc recall',bridge_arcs_inserted:'Bridge arcs inserted',unresolved_connections:'Unresolved connections'};
+  const names={gps_points:'GPS points',route_continuity_before_decoding:'Route continuity before decoding',route_continuity_after_decoding:'Route continuity after decoding',approx_pointwise_accuracy_classifier:'Approx. accuracy before',approx_pointwise_accuracy_viterbi:'Approx. accuracy after',reference_arc_recall:'Reference arc recall',bridge_arcs_inserted:'Bridge arcs inserted',unresolved_connections:'Unresolved connections'};
   $('metrics').innerHTML='';for(const [key,label] of Object.entries(names)){
     if(m[key]===undefined)continue;const div=document.createElement('div');div.className='metric';
     const value=['gps_points','bridge_arcs_inserted','unresolved_connections'].includes(key)?String(m[key]):(100*m[key]).toFixed(1)+'%';

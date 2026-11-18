@@ -23,7 +23,8 @@ def main():
         rows.append({"trip_id": trip_id, "gps_points": m["gps_points"],
             "approx_accuracy_before": m.get("approx_pointwise_accuracy_classifier"),
             "approx_accuracy_after": m.get("approx_pointwise_accuracy_viterbi"),
-            "continuity_before": m["continuity_classifier"], "continuity_after": m["continuity_viterbi"],
+            "route_continuity_before": m["route_continuity_before_decoding"],
+            "route_continuity_after": m["route_continuity_after_decoding"],
             "reference_arc_recall": m.get("reference_arc_recall"),
             "bridge_arcs_inserted": m["bridge_arcs_inserted"],
             "unresolved_connections": m["unresolved_connections"]})

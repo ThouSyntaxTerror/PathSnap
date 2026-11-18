@@ -11,7 +11,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-from pathsnap import Trip, make_rows, decode, continuity, read_array, bridge_route
+from pathsnap import Trip, make_rows, decode, route_continuity, read_array, bridge_route
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 log = logging.getLogger("pathsnap")
@@ -69,8 +69,8 @@ def predict(request: Request):
     routed, bridge_count, unresolved = bridge_route(trip, road, decoded)
     metrics = {
         "gps_points": int(len(ids)),
-        "continuity_classifier": continuity(trip, raw_arcs),
-        "continuity_viterbi": continuity(trip, decoded),
+        "route_continuity_before_decoding": route_continuity(trip, raw_arcs),
+        "route_continuity_after_decoding": route_continuity(trip, decoded),
         "bridge_arcs_inserted": int(bridge_count),
         "unresolved_connections": int(unresolved),
     }
@@ -93,8 +93,8 @@ def predict(request: Request):
     road_sample = np.unique(candidates[sample_idx].ravel())
     if len(road_sample) > 2500: road_sample = road_sample[:2500]
     road_lines = [[trip.nodes[trip.arcs[a, 0]].tolist(), trip.nodes[trip.arcs[a, 1]].tolist()] for a in road_sample]
-    log.info("INFERENCE DONE trip=%s gps=%d continuity=%.3f approx_accuracy=%s", request.trip_id, len(ids),
-             metrics["continuity_viterbi"], metrics.get("approx_pointwise_accuracy_viterbi"))
+    log.info("INFERENCE DONE trip=%s gps=%d route_continuity=%.3f approx_accuracy=%s", request.trip_id, len(ids),
+             metrics["route_continuity_after_decoding"], metrics.get("approx_pointwise_accuracy_viterbi"))
     return {"trip_id": request.trip_id, "mode": MODE, "metrics": metrics, "gps": gps,
             "road_lines": road_lines, "predicted_lines": route_lines,
             "metric_note": "Pointwise accuracy uses the nearest reference-route arc as a proxy; the source does not provide a GPS-to-arc label for every point."}
