@@ -1,0 +1,112 @@
+[
+  {
+    "trip_id": "00000000",
+    "gps_points": 2503,
+    "approx_accuracy_before": 0.874151018777467,
+    "approx_accuracy_after": 0.8885337594886137,
+    "continuity_before": 0.9356514788169464,
+    "continuity_after": 0.9840127897681854,
+    "reference_arc_recall": 0.9720670391061452,
+    "bridge_arcs_inserted": 84,
+    "unresolved_connections": 17
+  },
+  {
+    "trip_id": "00000007",
+    "gps_points": 1354,
+    "approx_accuracy_before": 0.8825701624815362,
+    "approx_accuracy_after": 0.8921713441654358,
+    "continuity_before": 0.9859571322985957,
+    "continuity_after": 0.9970436067997044,
+    "reference_arc_recall": 0.983739837398374,
+    "bridge_arcs_inserted": 2,
+    "unresolved_connections": 2
+  },
+  {
+    "trip_id": "00000009",
+    "gps_points": 1049,
+    "approx_accuracy_before": 0.7073403241182078,
+    "approx_accuracy_after": 0.775023832221163,
+    "continuity_before": 0.8091603053435115,
+    "continuity_after": 0.9618320610687023,
+    "reference_arc_recall": 0.9813519813519813,
+    "bridge_arcs_inserted": 118,
+    "unresolved_connections": 4
+  },
+  {
+    "trip_id": "00000040",
+    "gps_points": 2995,
+    "approx_accuracy_before": 0.8390651085141904,
+    "approx_accuracy_after": 0.864440734557596,
+    "continuity_before": 0.935871743486974,
+    "continuity_after": 0.9926519706078825,
+    "reference_arc_recall": 1.0,
+    "bridge_arcs_inserted": 12,
+    "unresolved_connections": 13
+  },
+  {
+    "trip_id": "00000052",
+    "gps_points": 262,
+    "approx_accuracy_before": 0.8320610687022901,
+    "approx_accuracy_after": 0.8625954198473282,
+    "continuity_before": 0.8620689655172413,
+    "continuity_after": 0.9425287356321839,
+    "reference_arc_recall": 0.9263157894736842,
+    "bridge_arcs_inserted": 34,
+    "unresolved_connections": 9
+  },
+  {
+    "trip_id": "00000056",
+    "gps_points": 3958,
+    "approx_accuracy_before": 0.6877210712481051,
+    "approx_accuracy_after": 0.6995957554320363,
+    "continuity_before": 0.8334596916856204,
+    "continuity_after": 0.9663886782916351,
+    "reference_arc_recall": 0.9485018726591761,
+    "bridge_arcs_inserted": 166,
+    "unresolved_connections": 70
+  },
+  {
+    "trip_id": "00000065",
+    "gps_points": 768,
+    "approx_accuracy_before": 0.66015625,
+    "approx_accuracy_after": 0.6940104166666666,
+    "continuity_before": 0.848761408083442,
+    "continuity_after": 0.9647979139504563,
+    "reference_arc_recall": 0.9862068965517241,
+    "bridge_arcs_inserted": 44,
+    "unresolved_connections": 11
+  },
+  {
+    "trip_id": "00000076",
+    "gps_points": 1486,
+    "approx_accuracy_before": 0.7119784656796769,
+    "approx_accuracy_after": 0.7705248990578735,
+    "continuity_before": 0.7973063973063973,
+    "continuity_after": 0.9595959595959596,
+    "reference_arc_recall": 0.9759358288770054,
+    "bridge_arcs_inserted": 188,
+    "unresolved_connections": 11
+  },
+  {
+    "trip_id": "00000077",
+    "gps_points": 3911,
+    "approx_accuracy_before": 0.5717207875223728,
+    "approx_accuracy_after": 0.6075172590130401,
+    "continuity_before": 0.860613810741688,
+    "continuity_after": 0.9859335038363172,
+    "reference_arc_recall": 0.996268656716418,
+    "bridge_arcs_inserted": 87,
+    "unresolved_connections": 9
+  },
+  {
+    "trip_id": "00000091",
+    "gps_points": 874,
+    "approx_accuracy_before": 0.7116704805491991,
+    "approx_accuracy_after": 0.7608695652173914,
+    "continuity_before": 0.8178694158075601,
+    "continuity_after": 0.9587628865979382,
+    "reference_arc_recall": 0.9224137931034483,
+    "bridge_arcs_inserted": 90,
+    "unresolved_connections": 17
+  }
+]
