@@ -43,9 +43,9 @@ py -3.12 make_report.py
 py -3.12 make_first_eval_guide.py
 ```
 
-`train.py` uses all 80 training trips, sampling at most 120 GPS observations per trip to fit within hackathon time. The five models are Logistic Regression, Gaussian Naive Bayes, Decision Tree, Random Forest, and Histogram Gradient Boosting. Three-fold GroupKFold separates trips. Selection uses the ten student-test trips' mean accuracy **after** Viterbi, then Optuna TPE tunes the selected family with grouped training CV. All model settings, timings, metrics, and tuning trials are in `artifacts/experiment_results.json`.
+`train.py` uses all 80 training trips, sampling at most 120 GPS observations per trip to fit within hackathon time. The five models are Logistic Regression, Gaussian Naive Bayes, Decision Tree, Random Forest, and Histogram Gradient Boosting. Three-fold GroupKFold separates trips. The model family is selected using mean grouped training-CV macro F1 only; student-test results are reporting-only. Optuna TPE tunes the selected family with grouped training CV. All model settings, timings, metrics, confusion-matrix counts, and tuning trials are in `artifacts/experiment_results.json`.
 
-`generate_assets.py` saves a comparison chart and an interactive Folium map of student-test trip `00000052`; its reference route is visible only in this development map, not in the evaluator UI. The report generator uses actual logged data and screenshots. The included PDF is a **draft**: capture and add the required Laptop 1 CMD/API-log screenshot during the actual two-laptop demonstration. Do not submit invented measurements or a fabricated screenshot.
+`generate_assets.py` saves model comparison, route-continuity, log-loss, and confusion-matrix plots from the results JSON. With `--data`, it also creates an EDA summary and interactive Folium map of student-test trip `00000052`; its reference route is visible only in this development map, not in the evaluator UI. The report generator uses actual logged data and screenshots. The included PDF is a **draft**: capture and add the required Laptop 1 CMD/API-log screenshot during the actual two-laptop demonstration. Do not submit invented measurements or a fabricated screenshot.
 
 ## Data and method
 
@@ -76,5 +76,6 @@ The Viterbi decoder favours staying on the same arc, then moving to a directly c
 - `make_first_eval_guide.py`: short first-evaluation PDF tied to the source code and recorded metrics
 - `VIVA_GUIDE.md`: short explanations of the required metrics and likely evaluator questions
 - `artifacts/`: trained models, actual results, maps, screenshots, report draft
+- `DELIVERABLE_CHECKLIST.md`: status of each item in the GitHub repository deliverable
 
 The source dataset is intentionally not copied into this project. Keep your downloaded dataset in its own folder and set `PATHSNAP_DATA_ROOT` to that path.
