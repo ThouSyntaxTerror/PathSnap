@@ -31,6 +31,8 @@
     .metric span{font-size:12px;color:#52657b}
     .route-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:12px}
     .toggles{display:flex;gap:8px;flex-wrap:wrap}
+    .zoom-buttons{display:flex;gap:8px;flex-wrap:wrap}
+    button.secondary{background:#fff;color:var(--blue)}
     .toggle{display:flex;align-items:center;gap:8px;padding:7px 10px;border:1px solid var(--line);border-radius:8px;background:#fbfcfe;cursor:pointer;font-size:13px;font-weight:600}
     .toggle[hidden]{display:none}
     .toggle input{width:auto;margin:0;accent-color:var(--blue)}
@@ -72,6 +74,10 @@
       <div>
         <h2>Route view</h2>
         <small id="route-summary">Run a prediction to compare the GPS trace, actual path and predicted path.</small>
+      </div>
+      <div class="zoom-buttons">
+        <button id="zoom-trip" type="button">Zoom to trip</button>
+        <button id="zoom-all" type="button" class="secondary">Show everything</button>
       </div>
       <div class="toggles" aria-label="Map layers">
         <label class="toggle"><input type="checkbox" data-layer="basemap" checked><i class="sw bg"></i><span>Map background</span></label>
@@ -180,6 +186,7 @@ function renderMetrics(m) {
 // and GPS points sit above both.
 const PANES = {roads: 405, actual: 410, predicted: 420, gps: 430};
 let map = null, basemap = null, layers = {};
+let tripBounds = null, allBounds = null;
 
 function ensureMap() {
   if (map) return true;
@@ -244,12 +251,41 @@ function renderMap(data) {
   }
 
   applyToggles();
-  const bounds = L.latLngBounds([...gps, ...reference.flat(), ...predicted.flat()].map(ll));
-  if (bounds.isValid()) {
-    map.invalidateSize();
-    map.fitBounds(bounds, {padding: [36, 36], maxZoom: 17});
-  }
+
+  // "Trip" bounds use the GPS trace and the reference route, trimmed at the 2nd and 98th
+  // percentiles so one stray point or long bridge arc cannot zoom the view out to a dot.
+  // "All" bounds include every drawn point, including predicted bridge arcs.
+  const trip = [...gps, ...reference.flat()];
+  const everything = [...trip, ...predicted.flat()];
+  tripBounds = robustBounds(trip.length ? trip : everything);
+  allBounds = L.latLngBounds(everything.map(ll));
+  map.invalidateSize();
+  zoomTo(tripBounds);
 }
+
+function robustBounds(points) {
+  if (!points.length) return null;
+  const pct = (values, q) => {
+    const sorted = [...values].sort((a, b) => a - b);
+    return sorted[Math.min(sorted.length - 1, Math.floor(q * (sorted.length - 1)))];
+  };
+  const lons = points.map(p => p[0]), lats = points.map(p => p[1]);
+  const south = pct(lats, 0.02), north = pct(lats, 0.98);
+  const west = pct(lons, 0.02), east = pct(lons, 0.98);
+  // Pad so the route sits in the middle with a margin on every side.
+  const latPad = Math.max((north - south) * 0.15, 0.0005);
+  const lonPad = Math.max((east - west) * 0.15, 0.0005);
+  return L.latLngBounds([[south - latPad, west - lonPad], [north + latPad, east + lonPad]]);
+}
+
+function zoomTo(bounds) {
+  if (!map || !bounds || !bounds.isValid()) return;
+  map.invalidateSize();
+  map.fitBounds(bounds, {padding: [24, 24], maxZoom: 18});
+}
+
+$('zoom-trip').onclick = () => zoomTo(tripBounds);
+$('zoom-all').onclick = () => zoomTo(allBounds);
 
 ensureMap();
 
