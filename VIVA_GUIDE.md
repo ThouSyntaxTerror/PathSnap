@@ -24,8 +24,8 @@ These values are from the recorded **student-test rehearsal**, not the hidden ev
 | Candidate miss rate | Fraction of GPS points whose proxy reference arc was absent from all six candidates. The classifier cannot recover a missing candidate. | 1.96% |
 | Route continuity | Fraction of successive predicted arcs that are the same or directly connected in the road graph. | 60.52% before, 71.89% after Viterbi on sampled points |
 | Route-level result | Proxy pointwise accuracy after Viterbi; report alongside continuity, not as a true whole-route match score. | 76.76% |
-| Training time | Recorded fitting plus three-fold CV time for the initial Histogram Gradient Boosting model on sampled training rows. | About 2.4 seconds on the development machine |
-| Inference time | Model scoring only over the sampled student-test trips; candidate generation and Viterbi add time. | About 0.055 seconds total |
+| Training time | Recorded fitting plus three-fold CV time for the initial Histogram Gradient Boosting model on sampled training rows. | About 7.8 seconds on the latest development run; varies with machine load |
+| Inference time | Model scoring only over the sampled student-test trips; candidate generation and Viterbi add time. | About 0.243 seconds total on the latest development run |
 
 The **full** ten-trip rehearsal used all 19,160 GPS observations and achieved 78.2% mean per-trip proxy accuracy after Viterbi and 97.1% mean direct-adjacency continuity. These full-trip numbers are not directly comparable with the evenly sampled experiment above. The post-decoding bridge step still left 163 transitions unresolved across all ten trips.
 
