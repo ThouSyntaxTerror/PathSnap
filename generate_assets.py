@@ -9,6 +9,7 @@ import folium
 import joblib
 import matplotlib.pyplot as plt
 import numpy as np
+from matplotlib.collections import LineCollection
 
 from pathsnap import Trip, make_rows, decode, bridge_route
 
@@ -49,6 +50,28 @@ def main():
     scores = model.predict_proba(x.reshape(-1, x.shape[-1]))[:, 1].reshape(candidates.shape)
     predicted = decode(trip, road, ids, candidates, scores)
     routed, _, _ = bridge_route(trip, road, predicted)
+    inventory = json.loads((args.output / "dataset_inventory.json").read_text())
+    records = inventory["trips"]
+    fig, axes = plt.subplots(1, 3, figsize=(12, 3.8), layout="constrained")
+    for partition, color in (("train", "#4784b8"), ("student_test", "#e58b33")):
+        values = [r["gps_points"] for r in records if r["partition"] == partition]
+        axes[0].hist(values, bins=16, alpha=.65, color=color, label=partition.replace("_", " "))
+    axes[0].set_title("GPS observations per trip"); axes[0].set_xlabel("Observations"); axes[0].set_ylabel("Trips")
+    axes[0].legend(fontsize=7)
+    gap_rate = [100 * r["one_second_steps"] / max(r["time_steps"], 1) for r in records]
+    axes[1].hist(gap_rate, bins=15, color="#639b86")
+    axes[1].set_title("One-second sampling share"); axes[1].set_xlabel("Percent of time steps"); axes[1].set_ylabel("Trips")
+    relevant_arcs = np.unique(candidates[::max(1, len(candidates)//250)].ravel())
+    segments = np.stack((road.a[relevant_arcs], road.b[relevant_arcs]), axis=1)
+    axes[2].add_collection(LineCollection(segments, colors="#aab7c6", linewidths=.5, alpha=.55))
+    ref_ids = np.unique(trip.route)
+    axes[2].add_collection(LineCollection(np.stack((road.a[ref_ids], road.b[ref_ids]), axis=1),
+                                      colors="#e58b33", linewidths=1.7, alpha=.85))
+    axes[2].scatter(road.track_xy[:, 0], road.track_xy[:, 1], s=2, color="#2779d1", alpha=.7)
+    axes[2].autoscale(); axes[2].set_aspect("equal", adjustable="box")
+    axes[2].set_title(f"Trip {args.trip}: GPS and roads"); axes[2].set_xlabel("Local metres"); axes[2].set_ylabel("Local metres")
+    fig.savefig(args.output / "eda_summary.png", dpi=180)
+    plt.close(fig)
     center = [float(np.mean(trip.track[:, 1])), float(np.mean(trip.track[:, 0]))]
     m = folium.Map(location=center, zoom_start=14, tiles=None, control_scale=True)
     roads = folium.FeatureGroup(name="Nearby road network", show=True)

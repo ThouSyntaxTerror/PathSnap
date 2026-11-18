@@ -7,7 +7,7 @@ import numpy as np
 from scipy.spatial import cKDTree
 import networkx as nx
 
-FEATURE_NAMES = ["distance_m", "direction_cos", "speed_mps", "segment_length_m", "time_gap_s", "movement_m"]
+FEATURE_NAMES = ["log1p_distance_m", "direction_cos", "log1p_speed_mps", "log1p_segment_length_m", "log1p_time_gap_s", "log1p_movement_m"]
 
 
 def read_array(path: Path, columns: int, dtype=float) -> np.ndarray:

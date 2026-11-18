@@ -35,6 +35,8 @@ The folder must contain trip subfolders with matching `.track`, `.nodes`, `.arcs
 
 ```powershell
 py -3.12 train.py --data 'C:\path\to\Student folder' --output artifacts --train-points-per-trip 120 --test-points-per-trip 250 --trials 5
+py -3.12 inventory.py --data 'C:\path\to\Student folder' --output artifacts
+py -3.12 feature_example.py --data 'C:\path\to\Student folder' --output artifacts/feature_sample.csv
 py -3.12 evaluate_full.py --data 'C:\path\to\Student folder' --output artifacts
 py -3.12 generate_assets.py --data 'C:\path\to\Student folder' --output artifacts
 py -3.12 make_report.py
@@ -62,12 +64,15 @@ The Viterbi decoder favours staying on the same arc, then moving to a directly c
 ## Files
 
 - `pathsnap.py`: trip parsing, geometry, features, labels, Viterbi decoding
+- `inventory.py`: reproducible dataset inventory and quality checks
+- `feature_example.py`: export an actual, readable candidate-feature table for the viva
 - `train.py`: five-model comparison, grouped CV, Optuna search, model artifacts
 - `server.py`: FastAPI evaluator endpoint and server-side metrics
 - `evaluate_full.py`: complete student-test rehearsal through the same prediction path
 - `ui/index.html`: Laptop 2 interface, no JavaScript dependencies or online map tiles
 - `generate_assets.py`: real comparison plot and interactive Folium map
 - `make_report.py`: generated technical report draft
+- `VIVA_GUIDE.md`: short explanations of the required metrics and likely evaluator questions
 - `artifacts/`: trained models, actual results, maps, screenshots, report draft
 
 The source dataset is intentionally not copied into this project. Keep your downloaded dataset in its own folder and set `PATHSNAP_DATA_ROOT` to that path.

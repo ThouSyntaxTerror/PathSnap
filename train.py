@@ -3,17 +3,16 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import time
 from pathlib import Path
 
 import joblib
 import numpy as np
 import optuna
-from sklearn.dummy import DummyClassifier
+from sklearn.base import clone
 from sklearn.ensemble import HistGradientBoostingClassifier, RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import f1_score, log_loss, precision_score, recall_score
+from sklearn.metrics import accuracy_score, confusion_matrix, f1_score, log_loss, precision_score, recall_score
 from sklearn.model_selection import GroupKFold
 from sklearn.naive_bayes import GaussianNB
 from sklearn.tree import DecisionTreeClassifier
@@ -69,6 +68,8 @@ def score_model(model, trips):
     y, p = np.concatenate(all_y), np.concatenate(all_p)
     hard = (p >= 0.5).astype(int)
     return {
+        "candidate_accuracy": float(accuracy_score(y, hard)),
+        "confusion_matrix_tn_fp_fn_tp": confusion_matrix(y, hard, labels=[0, 1]).tolist(),
         "candidate_macro_f1": float(f1_score(y, hard, average="macro", zero_division=0)),
         "precision": float(precision_score(y, hard, zero_division=0)),
         "recall": float(recall_score(y, hard, zero_division=0)),
@@ -85,7 +86,7 @@ def score_model(model, trips):
 def grouped_cv(model, x, y, groups, folds=3):
     scores = []
     for fit, valid in GroupKFold(n_splits=folds).split(x, y, groups):
-        candidate = joblib.loads(joblib.dumps(model)) if hasattr(joblib, "loads") else __import__("sklearn.base", fromlist=["clone"]).clone(model)
+        candidate = clone(model)
         candidate.fit(x[fit], y[fit])
         pred = candidate.predict(x[valid])
         scores.append(float(f1_score(y[valid], pred, average="macro", zero_division=0)))
@@ -119,7 +120,9 @@ def main():
         model.fit(x, y)
         train_seconds = time.perf_counter() - start
         measured = score_model(model, test_trips)
-        measured.update({"cv_macro_f1": cv, "cv_macro_f1_mean": float(np.mean(cv)), "training_seconds_including_cv": train_seconds,
+        train_macro_f1 = float(f1_score(y, model.predict(x), average="macro", zero_division=0))
+        measured.update({"cv_macro_f1": cv, "cv_macro_f1_mean": float(np.mean(cv)), "train_macro_f1": train_macro_f1,
+                         "training_seconds_including_cv": train_seconds,
                          "parameters": model.get_params()})
         results["models"][name] = measured
         joblib.dump(model, args.output / f"{name}.joblib")
